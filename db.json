@@ -1,0 +1,258 @@
+{
+  "doctors": [
+    {
+      "id": 1,
+      "name": "Dr. Sarah Mitchell",
+      "specialty": "Cardiology",
+      "description": "Consultant cardiologist focused on preventive heart care, hypertension and arrhythmia management.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Thu"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "13:00",
+        "14:00"
+      ],
+      "experienceYears": 14,
+      "consultationFee": 350,
+      "rating": 4.9,
+      "phone": "+1 (555) 010-2201",
+      "email": "sarah.mitchell@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 2,
+      "name": "Dr. James Carter",
+      "specialty": "Dermatology",
+      "description": "Skin, hair and nail specialist treating acne, eczema, psoriasis and performing skin cancer screenings.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "15:00",
+        "16:00"
+      ],
+      "experienceYears": 10,
+      "consultationFee": 280,
+      "rating": 4.7,
+      "phone": "+1 (555) 010-2202",
+      "email": "james.carter@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 3,
+      "name": "Dr. Emily Watson",
+      "specialty": "Pediatrics",
+      "description": "Pediatrician caring for newborns to teenagers, with a special interest in childhood asthma and nutrition.",
+      "workingDays": [
+        "Tue",
+        "Wed",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "09:30",
+        "10:00",
+        "10:30",
+        "11:00"
+      ],
+      "experienceYears": 12,
+      "consultationFee": 300,
+      "rating": 4.8,
+      "phone": "+1 (555) 010-2203",
+      "email": "emily.watson@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 4,
+      "name": "Dr. Michael Chen",
+      "specialty": "Orthopedics",
+      "description": "Orthopedic surgeon specializing in sports injuries, joint replacement and fracture care.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "11:00",
+        "13:00",
+        "15:00"
+      ],
+      "experienceYears": 16,
+      "consultationFee": 400,
+      "rating": 4.6,
+      "phone": "+1 (555) 010-2204",
+      "email": "michael.chen@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 5,
+      "name": "Dr. Olivia Bennett",
+      "specialty": "Neurology",
+      "description": "Neurologist treating migraines, epilepsy and movement disorders with a patient-first approach.",
+      "workingDays": [
+        "Wed",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "10:00",
+        "11:30",
+        "13:00",
+        "14:30"
+      ],
+      "experienceYears": 13,
+      "consultationFee": 380,
+      "rating": 4.8,
+      "phone": "+1 (555) 010-2205",
+      "email": "olivia.bennett@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 6,
+      "name": "Dr. Daniel Harris",
+      "specialty": "Dentistry",
+      "description": "Family dentist offering cleanings, fillings, whitening and root canal treatment in a calm environment.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 9,
+      "consultationFee": 200,
+      "rating": 4.5,
+      "phone": "+1 (555) 010-2206",
+      "email": "daniel.harris@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 7,
+      "name": "Dr. Sofia Ramirez",
+      "specialty": "Ophthalmology",
+      "description": "Eye doctor providing comprehensive eye exams, cataract follow-ups and dry-eye treatment.",
+      "workingDays": [
+        "Tue",
+        "Fri",
+        "Sat"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "12:30",
+        "14:00"
+      ],
+      "experienceYears": 11,
+      "consultationFee": 320,
+      "rating": 4.7,
+      "phone": "+1 (555) 010-2207",
+      "email": "sofia.ramirez@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 8,
+      "name": "Dr. Ahmed Hassan",
+      "specialty": "General Medicine",
+      "description": "Family physician for check-ups, chronic disease management and minor illnesses.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 8,
+      "consultationFee": 150,
+      "rating": 4.4,
+      "phone": "+1 (555) 010-2208",
+      "email": "ahmed.hassan@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 9,
+      "name": "Dr. Grace Kim",
+      "specialty": "Psychiatry",
+      "description": "Psychiatrist supporting patients with anxiety, depression and stress-related conditions.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "15:00"
+      ],
+      "experienceYears": 15,
+      "consultationFee": 420,
+      "rating": 4.9,
+      "phone": "+1 (555) 010-2209",
+      "email": "grace.kim@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 10,
+      "name": "Dr. Lucas Meyer",
+      "specialty": "ENT",
+      "description": "Ear, nose and throat specialist for sinus problems, hearing loss and tonsillitis.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:30",
+        "16:00"
+      ],
+      "experienceYears": 10,
+      "consultationFee": 260,
+      "rating": 4.6,
+      "phone": "+1 (555) 010-2210",
+      "email": "lucas.meyer@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    }
+  ],
+  "appointments": [
+    {
+      "patientName": "sdasdas",
+      "email": "dsafasdafs@dfasdf.ss",
+      "phone": "4545457",
+      "doctorId": 1,
+      "date": "2026-09-17",
+      "time": "10:00",
+      "note": "aszdasfdasdf",
+      "status": "scheduled",
+      "id": 1
+    }
+  ]
+}
