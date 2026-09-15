@@ -8,18 +8,15 @@ export function Footer() {
         <div className="flex items-center gap-2">
           <Stethoscope className="h-4 w-4 text-primary" />
           <span>
-            MediCare — React Summer Training final project by Yousef Ali
+            MediCare — Medical Booking System
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/" className="hover:text-foreground">
-            Home
+          <Link to="https://github.com/dev-joee/MediCare-React" className="hover:text-foreground">
+            Github
           </Link>
-          <Link to="/doctors" className="hover:text-foreground">
-            Doctors
-          </Link>
-          <Link to="/appointments" className="hover:text-foreground">
-            My Appointments
+          <Link to="https://github.com/dev-joee" className="hover:text-foreground">
+            Developer
           </Link>
           <span>© {new Date().getFullYear()}</span>
         </div>
