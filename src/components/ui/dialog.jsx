@@ -23,7 +23,7 @@ export function Dialog({ open, onOpenChange, className, children }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/50 animate-fade-in"
         aria-hidden="true"
         onClick={() => onOpenChange(false)}
       />
@@ -31,7 +31,7 @@ export function Dialog({ open, onOpenChange, className, children }) {
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg',
+          'relative z-10 w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg animate-dialog-in',
           className,
         )}
       >

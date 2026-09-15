@@ -8,7 +8,7 @@ import { DoctorAvatar } from './DoctorAvatar'
 
 export function DoctorCard({ doctor }) {
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col transition-shadow duration-200 hover:shadow-md">
       <CardContent className="flex flex-1 flex-col gap-4 p-5">
         <div className="flex items-start gap-4">
           <DoctorAvatar name={doctor.name} seed={doctor.id} className="h-14 w-14 text-lg" />

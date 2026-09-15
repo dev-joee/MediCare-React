@@ -120,7 +120,7 @@ function ProfileForm({ defaultValues, onSave, onCancel, submitLabel }) {
 // Saved-profile card: avatar initials, name, contact details and an edit action.
 function ProfileView({ name, email, phone, onEdit }) {
   return (
-    <Card>
+    <Card className="animate-fade-in-up">
       <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
         <div
           aria-hidden="true"
@@ -151,7 +151,7 @@ function ProfileView({ name, email, phone, onEdit }) {
 // (no alert()) plus a button that opens the form.
 function EmptyProfile({ onAdd }) {
   return (
-    <Card>
+    <Card className="animate-fade-in-up">
       <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <UserRound className="h-8 w-8" />

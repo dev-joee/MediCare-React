@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import Layout from '../components/layout/Layout'
 import { Skeleton } from '../components/ui/skeleton'
 
+const HomePage = lazy(() => import('../pages/HomePage'))
 const DoctorsPage = lazy(() => import('../pages/DoctorsPage'))
 const DoctorDetailsPage = lazy(() => import('../pages/DoctorDetailsPage'))
 const BookAppointmentPage = lazy(() => import('../pages/BookAppointmentPage'))
@@ -37,7 +38,8 @@ export const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: delay(<DoctorsPage />) },
+      { index: true, element: delay(<HomePage />) },
+      { path: 'doctors', element: delay(<DoctorsPage />) },
       { path: 'doctors/:id', element: delay(<DoctorDetailsPage />) },
       { path: 'book', element: delay(<BookAppointmentPage />) },
       { path: 'book/:doctorId', element: delay(<BookAppointmentPage />) },

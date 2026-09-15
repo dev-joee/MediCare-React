@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
-import { CalendarDays, Clock, Mail, Phone, Stethoscope, User } from 'lucide-react'
+import { CalendarDays, Clock, Loader2, Mail, Phone, Stethoscope, User } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
@@ -30,7 +30,16 @@ function notInPast(value) {
 }
 
 // Shared appointment form (React Hook Form) used for both booking and editing.
-export function AppointmentForm({ doctors, defaultValues, onSubmit, submitting, submitLabel }) {
+// `submitting` disables the button and shows a spinner so in-flight saves are
+// obvious and double submissions are prevented.
+export function AppointmentForm({
+  doctors,
+  defaultValues,
+  onSubmit,
+  submitting,
+  submitLabel,
+  submittingLabel = 'Saving...',
+}) {
   const {
     register,
     handleSubmit,
@@ -198,7 +207,8 @@ export function AppointmentForm({ doctors, defaultValues, onSubmit, submitting, 
       </div>
 
       <Button type="submit" disabled={submitting} className={cn('w-full sm:w-auto')}>
-        {submitting ? 'Saving...' : submitLabel}
+        {submitting && <Loader2 className="animate-spin" aria-hidden="true" />}
+        {submitting ? submittingLabel : submitLabel}
       </Button>
     </form>
   )

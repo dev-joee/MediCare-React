@@ -20,6 +20,51 @@ function Detail({ icon: Icon, label, value }) {
   )
 }
 
+// Loading placeholder mirroring the doctor details card (header, description,
+// detail grid, time-slot pills, fee + book button).
+function DoctorDetailsSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <Skeleton className="h-4 w-28" />
+      <Card>
+        <CardContent className="space-y-6 p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <div className="flex-1 space-y-3">
+              <Skeleton className="h-7 w-56" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <div className="space-y-2 pt-1">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 rounded-lg bg-accent/60 p-4 sm:grid-cols-2">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} className="h-4 w-48" />
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-48" />
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Skeleton key={index} className="h-8 w-16 rounded-lg" />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-border pt-5">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-11 w-44 rounded-lg" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export default function DoctorDetailsPage() {
   const { id } = useParams()
   const [doctor, setDoctor] = useState(null)
@@ -40,23 +85,7 @@ export default function DoctorDetailsPage() {
   }, [id])
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <Skeleton className="h-8 w-40" />
-        <div className="space-y-6 rounded-xl border border-border p-6">
-          <div className="flex items-center gap-5">
-            <Skeleton className="h-24 w-24 rounded-full" />
-            <div className="flex-1 space-y-3">
-              <Skeleton className="h-7 w-56" />
-              <Skeleton className="h-5 w-28 rounded-full" />
-            </div>
-          </div>
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-10 w-44" />
-        </div>
-      </div>
-    )
+    return <DoctorDetailsSkeleton />
   }
 
   if (error === 'not-found') {

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarPlus } from 'lucide-react'
+import { CalendarPlus, Loader2 } from 'lucide-react'
 import { AppointmentCard } from '../components/appointments/AppointmentCard'
+import { AppointmentCardSkeleton } from '../components/appointments/AppointmentCardSkeleton'
 import { Button, buttonVariants } from '../components/ui/button'
 import { ErrorAlert } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
 import { useToast } from '../components/ui/toast'
 import {
   Dialog,
@@ -17,23 +17,11 @@ import { cn } from '../lib/utils'
 import { deleteAppointment, getAppointments, getDoctors } from '../services/api'
 
 function AppointmentsSkeleton() {
+  // Same vertical stack as the real list — no layout shift when it swaps.
   return (
     <div className="space-y-5">
       {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="space-y-4 rounded-xl border border-border p-5">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-44" />
-              <Skeleton className="h-3.5 w-28" />
-            </div>
-          </div>
-          <Skeleton className="h-4 w-3/4" />
-          <div className="flex gap-3">
-            <Skeleton className="h-9 w-36" />
-            <Skeleton className="h-9 w-40" />
-          </div>
-        </div>
+        <AppointmentCardSkeleton key={index} />
       ))}
     </div>
   )
@@ -115,7 +103,7 @@ export default function AppointmentsPage() {
           onRetry={loadData}
         />
       ) : sortedAppointments.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border py-16 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-border py-16 text-center animate-fade-in-up">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
             <CalendarPlus className="h-7 w-7" />
           </span>
@@ -131,13 +119,20 @@ export default function AppointmentsPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          {sortedAppointments.map((appointment) => (
-            <AppointmentCard
+          {sortedAppointments.map((appointment, index) => (
+            // Subtle staggered entrance; the delay is capped so long lists
+            // don't feel like they're loading in slow motion.
+            <div
               key={appointment.id}
-              appointment={appointment}
-              doctor={doctorById[appointment.doctorId]}
-              onCancel={setCancelTarget}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+            >
+              <AppointmentCard
+                appointment={appointment}
+                doctor={doctorById[appointment.doctorId]}
+                onCancel={setCancelTarget}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -161,6 +156,7 @@ export default function AppointmentsPage() {
             Keep appointment
           </Button>
           <Button variant="destructive" onClick={confirmCancel} disabled={cancelling}>
+            {cancelling && <Loader2 className="animate-spin" aria-hidden="true" />}
             {cancelling ? 'Cancelling...' : 'Yes, cancel appointment'}
           </Button>
         </DialogFooter>

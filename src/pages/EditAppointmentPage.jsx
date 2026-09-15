@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PencilLine } from 'lucide-react'
 import { AppointmentForm } from '../components/appointments/AppointmentForm'
+import { AppointmentFormSkeleton } from '../components/appointments/AppointmentFormSkeleton'
 import { Button, buttonVariants } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { ErrorAlert } from '../components/ui/alert'
@@ -9,28 +10,6 @@ import { Skeleton } from '../components/ui/skeleton'
 import { useToast } from '../components/ui/toast'
 import { cn } from '../lib/utils'
 import { getAppointmentById, getDoctors, updateAppointment } from '../services/api'
-
-function EditSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-64" />
-      </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="grid gap-5 sm:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ))}
-        </div>
-        <Skeleton className="h-10 w-40" />
-      </CardContent>
-    </Card>
-  )
-}
 
 export default function EditAppointmentPage() {
   const { id } = useParams()
@@ -99,7 +78,7 @@ export default function EditAppointmentPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <Skeleton className="h-8 w-52" />
-        <EditSkeleton />
+        <AppointmentFormSkeleton />
       </div>
     )
   }

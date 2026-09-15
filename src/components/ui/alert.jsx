@@ -22,7 +22,10 @@ const alertVariants = cva(
 // Error-state banner with an optional retry button, e.g. for failed API calls.
 export function ErrorAlert({ title, message, onRetry, className }) {
   return (
-    <div role="alert" className={cn(alertVariants({ variant: 'destructive' }), className)}>
+    <div
+      role="alert"
+      className={cn(alertVariants({ variant: 'destructive' }), 'animate-fade-in-up', className)}
+    >
       <AlertCircle className="h-5 w-5" />
       <div className="pl-7">
         <p className="font-medium">{title}</p>

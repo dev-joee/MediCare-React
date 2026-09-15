@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MediCare — Book Doctor Appointments</title>
+    <script>
+      // Apply the saved (or system) theme before the app renders, so a dark
+      // theme never flashes as light first. Mirrors useThemeStore's logic.
+      try {
+        var saved = JSON.parse(localStorage.getItem('medicare-theme') || '{}').state
+        var theme = saved && saved.theme
+        if (
+          theme === 'dark' ||
+          (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (error) {
+        /* corrupted storage — fall back to light */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

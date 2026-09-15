@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode: the `dark` class is toggled on <html> by the theme
+   store, and the palette below swaps the CSS variables everything uses. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: light;
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -19,6 +24,29 @@
   --input: #cbd5e1;
   --ring: #0d9488;
   --radius: 0.75rem;
+}
+
+/* Dark theme: same teal identity, deeper slate surfaces. Only the variables
+   change — spacing, radii and component structure stay exactly the same. */
+.dark {
+  color-scheme: dark;
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --card: #1e293b;
+  --card-foreground: #e2e8f0;
+  --primary: #14b8a6;
+  --primary-foreground: #042f2e;
+  --secondary: #334155;
+  --secondary-foreground: #e2e8f0;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #134e4a;
+  --accent-foreground: #5eead4;
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+  --border: #334155;
+  --input: #475569;
+  --ring: #14b8a6;
 }
 
 @theme inline {
@@ -50,5 +78,81 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Subtle motion, all defined in one place: a shimmer sweep for skeleton
+   placeholders plus small enter animations for cards, pages, the dialog and
+   toasts. Durations are short (0.2s–0.4s) so nothing feels slow. */
+@theme {
+  --animate-shimmer: shimmer 1.8s linear infinite;
+  --animate-fade-in: fade-in 0.25s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.35s ease-out both;
+  --animate-dialog-in: dialog-in 0.2s ease-out both;
+  --animate-toast-in: toast-in 0.25s ease-out;
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+/* Respect users who prefer reduced motion: effectively disable all animations
+   and transitions above. Skeletons become static blocks, fades appear
+   instantly — nothing is hidden from the user. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

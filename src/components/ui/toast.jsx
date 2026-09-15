@@ -8,9 +8,9 @@ const TOAST_LIMIT = 3
 const ToastContext = createContext(null)
 
 const icons = {
-  success: <CheckCircle2 className="h-5 w-5 text-emerald-600" />,
+  success: <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />,
   error: <XCircle className="h-5 w-5 text-destructive" />,
-  info: <Info className="h-5 w-5 text-sky-600" />,
+  info: <Info className="h-5 w-5 text-sky-600 dark:text-sky-400" />,
 }
 
 function Toast({ toast, onClose }) {
@@ -18,7 +18,7 @@ function Toast({ toast, onClose }) {
     <div
       role="status"
       className={cn(
-        'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-lg',
+        'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-lg animate-toast-in',
         toast.closing && 'opacity-0 translate-x-2 transition-all duration-200',
       )}
     >

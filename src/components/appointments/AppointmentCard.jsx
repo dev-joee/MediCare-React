@@ -19,7 +19,7 @@ function DetailRow({ icon: Icon, label, children }) {
 // Shows one appointment with its doctor info plus edit and cancel actions.
 export function AppointmentCard({ appointment, doctor, onCancel }) {
   return (
-    <Card>
+    <Card className="transition-shadow duration-200 hover:shadow-md">
       <CardContent className="flex flex-col gap-4 p-5">
         <div className="flex items-start gap-4">
           {doctor ? (
