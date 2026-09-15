@@ -85,7 +85,7 @@ export default function BookAppointmentPage() {
             message="Booking needs the doctor list. Please check that the API server is running, then try again."
             onRetry={loadDoctors}
           />
-          <Link to="/" className="text-sm text-primary hover:underline">
+          <Link to="/doctors" className="text-sm text-primary hover:underline">
             ← Back to doctors
           </Link>
         </>

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { CalendarDays, Menu, Moon, Stethoscope, Sun, User, X } from 'lucide-react'
+import { CalendarDays, Home, Menu, Moon, Stethoscope, Sun, User, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useProfileStore, selectIsProfileComplete } from '../../stores/useProfileStore'
 import { useThemeStore } from '../../stores/useThemeStore'
 
 const links = [
-  { to: '/', label: 'Doctors', icon: Stethoscope, end: true },
+  { to: '/', label: 'Home', icon: Home, end: true },
+  { to: '/doctors', label: 'Doctors', icon: Stethoscope },
   { to: '/appointments', label: 'My Appointments', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ]

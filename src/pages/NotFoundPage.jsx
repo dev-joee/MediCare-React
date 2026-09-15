@@ -14,7 +14,7 @@ export default function NotFoundPage() {
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">
-        <Link to="/" className={cn(buttonVariants())}>
+        <Link to="/doctors" className={cn(buttonVariants())}>
           <Home className="h-4 w-4" />
           Go to doctors
         </Link>

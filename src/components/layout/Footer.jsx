@@ -13,6 +13,9 @@ export function Footer() {
         </div>
         <div className="flex items-center gap-4">
           <Link to="/" className="hover:text-foreground">
+            Home
+          </Link>
+          <Link to="/doctors" className="hover:text-foreground">
             Doctors
           </Link>
           <Link to="/appointments" className="hover:text-foreground">

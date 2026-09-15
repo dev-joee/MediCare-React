@@ -92,7 +92,7 @@ export default function DoctorDetailsPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
         <ErrorAlert title="Doctor not found." message="This doctor does not exist or has been removed." />
-        <Link to="/" className={cn(buttonVariants({ variant: 'outline' }))}>
+        <Link to="/doctors" className={cn(buttonVariants({ variant: 'outline' }))}>
           Back to doctors
         </Link>
       </div>
@@ -120,7 +120,7 @@ export default function DoctorDetailsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+      <Link to="/doctors" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back to doctors
       </Link>
 
