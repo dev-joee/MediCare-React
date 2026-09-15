@@ -21,3 +21,10 @@ export const useProfileStore = create(
     { name: 'medicare-patient-profile' },
   ),
 )
+
+// Derived selector — the single source of truth for "has the patient filled
+// in their profile?". A profile counts as complete once all contact fields are
+// saved. Shared by the Profile page (info view vs. empty state) and the Navbar
+// (red notification dot) so both always agree.
+export const selectIsProfileComplete = (state) =>
+  Boolean(state.name.trim() && state.email.trim() && state.phone.trim())

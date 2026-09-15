@@ -242,17 +242,5 @@
       "location": "MediCare Clinic, West Branch"
     }
   ],
-  "appointments": [
-    {
-      "patientName": "sdasdas",
-      "email": "dsafasdafs@dfasdf.ss",
-      "phone": "4545457",
-      "doctorId": 1,
-      "date": "2026-09-17",
-      "time": "10:00",
-      "note": "aszdasfdasdf",
-      "status": "scheduled",
-      "id": 1
-    }
-  ]
+  "appointments": []
 }

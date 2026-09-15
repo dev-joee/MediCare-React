@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { CalendarDays, Menu, Stethoscope, User, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { useProfileStore, selectIsProfileComplete } from '../../stores/useProfileStore'
 
 const links = [
   { to: '/', label: 'Doctors', icon: Stethoscope, end: true },
@@ -22,8 +23,21 @@ function Brand() {
   )
 }
 
+// Small red notification dot shown next to "Profile" until a profile is saved.
+function ProfileDot() {
+  return (
+    <>
+      <span className="h-2 w-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" />
+      <span className="sr-only">(profile incomplete)</span>
+    </>
+  )
+}
+
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  // Reactive: the dot shows only while the profile is incomplete and clears
+  // itself the moment the profile is saved (same source of truth as the page).
+  const profileComplete = useProfileStore(selectIsProfileComplete)
 
   const linkClassName = ({ isActive }) =>
     cn(
@@ -44,6 +58,7 @@ export function Navbar() {
             <NavLink key={link.to} to={link.to} end={link.end} className={linkClassName}>
               <link.icon className="h-4 w-4" />
               {link.label}
+              {link.to === '/profile' && !profileComplete && <ProfileDot />}
             </NavLink>
           ))}
         </div>
@@ -74,6 +89,7 @@ export function Navbar() {
               >
                 <link.icon className="h-4 w-4" />
                 {link.label}
+                {link.to === '/profile' && !profileComplete && <ProfileDot />}
               </NavLink>
             ))}
           </div>
