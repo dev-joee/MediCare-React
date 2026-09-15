@@ -4,6 +4,7 @@ import { DoctorFilters } from '../components/doctors/DoctorFilters'
 import { DoctorList } from '../components/doctors/DoctorList'
 import { DoctorCardSkeleton } from '../components/doctors/DoctorCardSkeleton'
 import { ErrorAlert } from '../components/ui/alert'
+import { useDebounce } from '../hooks/useDebounce'
 import { getDoctors } from '../services/api'
 
 function DoctorListSkeleton() {
@@ -26,6 +27,11 @@ export default function DoctorsPage() {
   const [search, setSearch] = useState('')
   const [specialty, setSpecialty] = useState('all')
 
+  // The input reflects `search` instantly, but filtering runs off the debounced
+  // value so a fast typist triggers one filter pass instead of one per key.
+  // Only the text search is debounced — the specialty dropdown stays immediate.
+  const debouncedSearch = useDebounce(search, 400)
+
   const loadDoctors = () => {
     setLoading(true)
     setError(null)
@@ -43,13 +49,13 @@ export default function DoctorsPage() {
   )
 
   const filteredDoctors = useMemo(() => {
-    const query = search.trim().toLowerCase()
+    const query = debouncedSearch.trim().toLowerCase()
     return doctors.filter((doctor) => {
       const matchesSearch = doctor.name.toLowerCase().includes(query)
       const matchesSpecialty = specialty === 'all' || doctor.specialty === specialty
       return matchesSearch && matchesSpecialty
     })
-  }, [doctors, search, specialty])
+  }, [doctors, debouncedSearch, specialty])
 
   return (
     <div className="space-y-6">
