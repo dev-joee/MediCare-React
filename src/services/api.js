@@ -49,3 +49,15 @@ export function findUserByEmail(email) {
 export function createUser(user) {
   return api.post('/users', user).then(unwrap)
 }
+
+// A single user's record. Each user owns their profile fields (name, email,
+// phone) on their own record — see src/stores/useProfileStore.js.
+export function getUserById(id) {
+  return api.get(`/users/${id}`).then(unwrap)
+}
+
+// PATCH rather than PUT: only the profile fields are sent, so the stored
+// password is left untouched.
+export function updateUser(id, changes) {
+  return api.patch(`/users/${id}`, changes).then(unwrap)
+}

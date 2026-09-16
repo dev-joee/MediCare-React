@@ -1196,19 +1196,29 @@
       "id": 1,
       "name": "Demo Patient",
       "email": "demo@medicare.test",
-      "password": "demo1234"
+      "password": "demo1234",
+      "phone": "+1 (555) 010-1001"
     },
     {
       "id": 2,
       "name": "Yousef Ali",
       "email": "yousef@medicare.test",
-      "password": "demo1234"
+      "password": "demo1234",
+      "phone": ""
     },
     {
       "name": "Yousef Ali",
       "email": "yousefali@gmail.com",
       "password": "2244yousef",
-      "id": 3
+      "id": 3,
+      "phone": "201022244455566"
+    },
+    {
+      "name": "Ahmed Ali",
+      "email": "ahmedali@gmail.com",
+      "password": "2244ahmed",
+      "phone": "+2111222333444",
+      "id": 4
     }
   ]
 }

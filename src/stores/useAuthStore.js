@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createUser, findUserByEmail } from '../services/api'
+import { useProfileStore } from './useProfileStore'
 
 // Mock authentication for this local training project.
 //
@@ -43,6 +44,9 @@ export const useAuthStore = create(
             name: name.trim(),
             email: cleanEmail,
             password,
+            // Profile fields live on the user's own record; the name from
+            // signup seeds the profile, the rest starts empty.
+            phone: '',
           })
 
           set({ user: toSessionUser(account) })
@@ -70,7 +74,12 @@ export const useAuthStore = create(
         }
       },
 
-      logout: () => set({ user: null }),
+      // Clears the session AND the cached profile, so the next user to log in
+      // can never see the previous user's details.
+      logout: () => {
+        useProfileStore.getState().clearProfile()
+        set({ user: null })
+      },
     }),
     {
       name: 'medicare-auth-user',

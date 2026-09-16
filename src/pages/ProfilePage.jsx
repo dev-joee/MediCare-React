@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Mail, Pencil, Phone, UserPlus, UserRound } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { ErrorAlert } from '../components/ui/alert'
+import { Skeleton } from '../components/ui/skeleton'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -178,17 +180,26 @@ export default function ProfilePage() {
   const name = useProfileStore((state) => state.name)
   const email = useProfileStore((state) => state.email)
   const phone = useProfileStore((state) => state.phone)
-  const setProfile = useProfileStore((state) => state.setProfile)
+  const userId = useProfileStore((state) => state.userId)
+  const loading = useProfileStore((state) => state.loading)
+  const error = useProfileStore((state) => state.error)
+  const loadProfile = useProfileStore((state) => state.loadProfile)
+  const saveProfile = useProfileStore((state) => state.saveProfile)
   const isComplete = useProfileStore(selectIsProfileComplete)
 
   // Local view/edit toggle — no extra route or duplicate state needed.
   const [editing, setEditing] = useState(false)
 
-  const handleSave = (values) => {
+  // Persists to this user's own record in db.json, then updates the store.
+  const handleSave = async (values) => {
     // `isComplete` reflects the state *before* saving, so first save vs. update
-    // gives the right message. The store update also clears the Navbar dot.
+    // gives the right message. A successful save also clears the Navbar dot.
     const wasComplete = isComplete
-    setProfile(values)
+    const { error: saveError } = await saveProfile(values)
+    if (saveError) {
+      toast('Could not save your profile. Please try again.', 'error')
+      return
+    }
     setEditing(false)
     toast(wasComplete ? 'Profile updated.' : 'Profile saved.')
   }
@@ -198,12 +209,27 @@ export default function ProfilePage() {
       <div>
         <h1 className="text-2xl font-bold sm:text-3xl">Profile</h1>
         <p className="mt-1 text-muted-foreground">
-          Manage your personal information. Details are saved on this device and
+          Manage your personal information. Details are saved to your account and
           used to pre-fill the booking form.
         </p>
       </div>
 
-      {editing ? (
+      {error ? (
+        <ErrorAlert
+          title="Could not load your profile"
+          message="Please check that the API server is running, then try again."
+          onRetry={() => loadProfile(userId)}
+        />
+      ) : loading ? (
+        <Card className="animate-fade-in-up">
+          <CardContent className="flex flex-col items-center gap-4 p-8">
+            <Skeleton className="h-20 w-20 rounded-full" />
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-10 w-36" />
+          </CardContent>
+        </Card>
+      ) : editing ? (
         <Card>
           <CardHeader>
             <CardTitle>{isComplete ? 'Edit profile' : 'Add your details'}</CardTitle>

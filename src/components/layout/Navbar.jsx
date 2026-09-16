@@ -73,7 +73,11 @@ export function Navbar() {
   const { toast } = useToast()
   // Reactive: the dot shows only while the profile is incomplete and clears
   // itself the moment the profile is saved (same source of truth as the page).
+  // Suppressed while the profile is still being fetched for the current user,
+  // so a login does not flash a stale dot.
   const profileComplete = useProfileStore(selectIsProfileComplete)
+  const profileLoading = useProfileStore((state) => state.loading)
+  const showProfileDot = !profileComplete && !profileLoading
   const isAuthenticated = useAuthStore(selectIsAuthenticated)
   const logout = useAuthStore((state) => state.logout)
 
@@ -107,7 +111,7 @@ export function Navbar() {
             <NavLink key={link.to} to={link.to} end={link.end} className={linkClassName}>
               <link.icon className="h-4 w-4" />
               {link.label}
-              {link.to === '/profile' && !profileComplete && <ProfileDot />}
+              {link.to === '/profile' && showProfileDot && <ProfileDot />}
             </NavLink>
           ))}
         </div>
@@ -160,7 +164,7 @@ export function Navbar() {
               >
                 <link.icon className="h-4 w-4" />
                 {link.label}
-                {link.to === '/profile' && !profileComplete && <ProfileDot />}
+                {link.to === '/profile' && showProfileDot && <ProfileDot />}
               </NavLink>
             ))}
 
