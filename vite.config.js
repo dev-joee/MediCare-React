@@ -12,8 +12,6 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      // The app calls "/api/..." and the dev server forwards the request to
-      // the local json-server instance (avoids CORS issues in development).
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
