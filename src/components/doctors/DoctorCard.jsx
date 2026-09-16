@@ -1,12 +1,25 @@
 import { Link } from 'react-router-dom'
-import { CalendarDays, Clock, Star } from 'lucide-react'
+import { CalendarDays, Clock, Heart, Star } from 'lucide-react'
 import { Badge } from '../ui/badge'
 import { buttonVariants } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import { cn } from '../../lib/utils'
 import { DoctorAvatar } from './DoctorAvatar'
+import { useFavoritesStore } from '../../stores/useFavoritesStore'
 
 export function DoctorCard({ doctor }) {
+  const isFavorite = useFavoritesStore(
+    (state) => state.favorites.includes(doctor.id),
+  )
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite)
+
+  const handleToggleFavorite = (event) => {
+    // Keep the click from bubbling up so it never triggers card navigation.
+    event.preventDefault()
+    event.stopPropagation()
+    toggleFavorite(doctor.id)
+  }
+
   return (
     <Card className="flex h-full flex-col transition-shadow duration-200 hover:shadow-md">
       <CardContent className="flex flex-1 flex-col gap-4 p-5">
@@ -26,6 +39,20 @@ export function DoctorCard({ doctor }) {
           <div className="ml-auto flex shrink-0 items-center gap-1 text-sm font-medium">
             <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
             {doctor.rating}
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              aria-pressed={isFavorite}
+              className="ml-1 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Heart
+                className={cn(
+                  'h-4 w-4 transition-colors',
+                  isFavorite && 'fill-destructive text-destructive',
+                )}
+              />
+            </button>
           </div>
         </div>
 

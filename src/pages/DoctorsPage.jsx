@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { SearchX } from 'lucide-react'
+import { Heart, SearchX } from 'lucide-react'
 import { DoctorFilters } from '../components/doctors/DoctorFilters'
 import { DoctorList } from '../components/doctors/DoctorList'
 import { DoctorCardSkeleton } from '../components/doctors/DoctorCardSkeleton'
 import { ErrorAlert } from '../components/ui/alert'
 import { Pagination } from '../components/ui/pagination'
 import { useDebounce } from '../hooks/useDebounce'
+import { useFavoritesStore } from '../stores/useFavoritesStore'
 import { getDoctors } from '../services/api'
+import { cn } from '../lib/utils'
 
 // Doctors shown per page. The grid is up to 3 columns wide, so 6 fills two full rows
 const DOCTORS_PER_PAGE = 6
@@ -30,6 +32,9 @@ export default function DoctorsPage() {
   // Search and filter state stays local to this page.
   const [search, setSearch] = useState('')
   const [specialty, setSpecialty] = useState('all')
+  const [view, setView] = useState('all') // 'all' | 'favorites'
+
+  const favorites = useFavoritesStore((state) => state.favorites)
 
   const [page, setPage] = useState(1)
 
@@ -57,9 +62,10 @@ export default function DoctorsPage() {
     return doctors.filter((doctor) => {
       const matchesSearch = doctor.name.toLowerCase().includes(query)
       const matchesSpecialty = specialty === 'all' || doctor.specialty === specialty
-      return matchesSearch && matchesSpecialty
+      const matchesView = view === 'all' || favorites.includes(doctor.id)
+      return matchesSearch && matchesSpecialty && matchesView
     })
-  }, [doctors, debouncedSearch, specialty])
+  }, [doctors, debouncedSearch, specialty, view, favorites])
 
   const totalPages = Math.max(1, Math.ceil(filteredDoctors.length / DOCTORS_PER_PAGE))
 
@@ -72,6 +78,11 @@ export default function DoctorsPage() {
 
   const handleSpecialtyChange = (value) => {
     setSpecialty(value)
+    setPage(1)
+  }
+
+  const handleViewChange = (value) => {
+    setView(value)
     setPage(1)
   }
 
@@ -103,6 +114,28 @@ export default function DoctorsPage() {
         specialties={specialties}
       />
 
+      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit" role="group" aria-label="Filter doctors">
+        {[
+          { value: 'all', label: 'All Doctors' },
+          { value: 'favorites', label: 'Favorites' },
+        ].map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => handleViewChange(option.value)}
+            aria-pressed={view === option.value}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              view === option.value
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <DoctorListSkeleton />
       ) : error ? (
@@ -112,13 +145,23 @@ export default function DoctorsPage() {
           onRetry={loadDoctors}
         />
       ) : filteredDoctors.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center animate-fade-in-up">
-          <SearchX className="h-10 w-10 text-muted-foreground" />
-          <p className="font-medium">No doctors found</p>
-          <p className="text-sm text-muted-foreground">
-            Try a different name or specialty.
-          </p>
-        </div>
+        view === 'favorites' ? (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center animate-fade-in-up">
+            <Heart className="h-10 w-10 text-muted-foreground" />
+            <p className="font-medium">No favorite doctors yet</p>
+            <p className="text-sm text-muted-foreground">
+              Tap the heart on a doctor card to save them here.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center animate-fade-in-up">
+            <SearchX className="h-10 w-10 text-muted-foreground" />
+            <p className="font-medium">No doctors found</p>
+            <p className="text-sm text-muted-foreground">
+              Try a different name or specialty.
+            </p>
+          </div>
+        )
       ) : (
         <>
           <p className="text-sm text-muted-foreground">

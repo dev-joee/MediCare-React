@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CalendarDays, Clock, Mail, MapPin, Phone, Star, UserRound } from 'lucide-react'
+import { CalendarDays, Clock, Heart, Mail, MapPin, Phone, Star, UserRound } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
 import { buttonVariants } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { ErrorAlert } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { DoctorAvatar } from '../components/doctors/DoctorAvatar'
+import { useFavoritesStore } from '../stores/useFavoritesStore'
 import { cn } from '../lib/utils'
 import { getDoctorById } from '../services/api'
 
@@ -70,6 +71,9 @@ export default function DoctorDetailsPage() {
   const [doctor, setDoctor] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const isFavorite = useFavoritesStore((state) => state.favorites.includes(id))
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite)
 
   useEffect(() => {
     setLoading(true)
@@ -136,6 +140,21 @@ export default function DoctorDetailsPage() {
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                   {doctor.rating}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(doctor.id)}
+                  aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  aria-pressed={isFavorite}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Heart
+                    className={cn(
+                      'h-4 w-4 transition-colors',
+                      isFavorite && 'fill-destructive text-destructive',
+                    )}
+                  />
+                  {isFavorite ? 'Favorited' : 'Favorite'}
+                </button>
               </div>
               <p className="mt-3 leading-relaxed text-muted-foreground">
                 {doctor.description}
