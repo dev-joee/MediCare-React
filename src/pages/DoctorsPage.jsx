@@ -4,8 +4,12 @@ import { DoctorFilters } from '../components/doctors/DoctorFilters'
 import { DoctorList } from '../components/doctors/DoctorList'
 import { DoctorCardSkeleton } from '../components/doctors/DoctorCardSkeleton'
 import { ErrorAlert } from '../components/ui/alert'
+import { Pagination } from '../components/ui/pagination'
 import { useDebounce } from '../hooks/useDebounce'
 import { getDoctors } from '../services/api'
+
+// Doctors shown per page. The grid is up to 3 columns wide, so 6 fills two full rows
+const DOCTORS_PER_PAGE = 6
 
 function DoctorListSkeleton() {
   // Same grid as DoctorList so the swap to real cards causes no layout shift.
@@ -27,9 +31,9 @@ export default function DoctorsPage() {
   const [search, setSearch] = useState('')
   const [specialty, setSpecialty] = useState('all')
 
-  // The input reflects `search` instantly, but filtering runs off the debounced
-  // value so a fast typist triggers one filter pass instead of one per key.
-  // Only the text search is debounced — the specialty dropdown stays immediate.
+  const [page, setPage] = useState(1)
+
+  // debounced search
   const debouncedSearch = useDebounce(search, 400)
 
   const loadDoctors = () => {
@@ -57,6 +61,31 @@ export default function DoctorsPage() {
     })
   }, [doctors, debouncedSearch, specialty])
 
+  const totalPages = Math.max(1, Math.ceil(filteredDoctors.length / DOCTORS_PER_PAGE))
+
+  // Changing the search text or specialty should send the user back to page 1
+  // so they never land on a page that no longer exists for the new results.
+  const handleSearchChange = (value) => {
+    setSearch(value)
+    setPage(1)
+  }
+
+  const handleSpecialtyChange = (value) => {
+    setSpecialty(value)
+    setPage(1)
+  }
+
+  const safePage = Math.min(page, totalPages)
+
+  const pagedDoctors = useMemo(() => {
+    const start = (safePage - 1) * DOCTORS_PER_PAGE
+    return filteredDoctors.slice(start, start + DOCTORS_PER_PAGE)
+  }, [filteredDoctors, safePage])
+
+  // Range shown, used for the "Showing X–Y of Z" summary.
+  const rangeStart = filteredDoctors.length === 0 ? 0 : (safePage - 1) * DOCTORS_PER_PAGE + 1
+  const rangeEnd = Math.min(safePage * DOCTORS_PER_PAGE, filteredDoctors.length)
+
   return (
     <div className="space-y-6">
       <div>
@@ -68,9 +97,9 @@ export default function DoctorsPage() {
 
       <DoctorFilters
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={handleSearchChange}
         specialty={specialty}
-        onSpecialtyChange={setSpecialty}
+        onSpecialtyChange={handleSpecialtyChange}
         specialties={specialties}
       />
 
@@ -93,9 +122,11 @@ export default function DoctorsPage() {
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            Showing {filteredDoctors.length} of {doctors.length} doctors
+            Showing {rangeStart}–{rangeEnd} of {filteredDoctors.length}
+            {filteredDoctors.length !== doctors.length && ` (filtered from ${doctors.length})`} doctors
           </p>
-          <DoctorList doctors={filteredDoctors} />
+          <DoctorList doctors={pagedDoctors} />
+          <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </div>
