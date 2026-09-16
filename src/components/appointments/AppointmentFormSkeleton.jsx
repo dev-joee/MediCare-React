@@ -1,8 +1,6 @@
 import { Card, CardContent, CardHeader } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
 
-// Loading placeholder for the appointment form card (used on both the Book
-// and Edit pages): header, a grid of labelled inputs and the submit button.
 export function AppointmentFormSkeleton() {
   return (
     <Card>

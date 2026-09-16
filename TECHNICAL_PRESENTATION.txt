@@ -1,0 +1,4439 @@
+==================================================
+MEDICARE — TECHNICAL PRESENTATION
+==================================================
+
+A study document for presenting the project.
+Everything here describes what is ACTUALLY in the code.
+Where something is not implemented, it says so explicitly.
+
+How to read the arrows:
+
+    Login Form
+        ↓
+    useAuthStore
+        ↓
+    Axios
+
+means "the login form calls the auth store, which calls Axios".
+
+
+==================================================
+1. PROJECT INTRODUCTION
+==================================================
+
+WHAT THE SYSTEM IS
+------------------
+MediCare is a single-page web application (SPA) for booking medical
+appointments. It is built with React and it talks to a mock REST API.
+
+The whole application runs in the browser. The only thing that is not in the
+browser is the mock API server (json-server), which serves and stores the data
+in a single file called db.json.
+
+WHAT PROBLEM IT SOLVES
+----------------------
+Booking a doctor's appointment normally means phone calls, waiting, and
+juggling notes about who you are seeing and when. MediCare turns that into a
+self-service flow:
+
+    1. Find a doctor       -> search / filter a catalogue
+    2. Pick a time         -> the doctor's own working days and time slots
+    3. Confirm the booking -> saved, and manageable afterwards
+    4. Manage it           -> view, reschedule or cancel from one list
+
+MAIN USERS
+----------
+Patients (the people booking appointments). There is no doctor-facing or
+admin-facing interface in this project. Doctors exist as data only.
+
+There is also a "user account" concept, because the app needs to know who is
+booking and needs to remember that person's contact details.
+
+    Not implemented in the current project:
+    - a doctor login / dashboard
+    - an admin panel
+    - multiple roles or permissions
+
+MAIN FUNCTIONALITY
+------------------
+- Doctor catalogue: 50 doctors, search by name, filter by specialty,
+  pagination, and a favorites-only view
+- Doctor details page for each doctor
+- Sign up / log in / log out
+- Protected pages that require a logged-in user
+- A personal profile that pre-fills the booking form
+- Appointment booking, editing (rescheduling) and cancelling
+- Favorite doctors
+- Dark / light theme
+- Loading skeletons, error states with retry, empty states, toast messages
+  and a 404 page
+
+
+==================================================
+2. TECHNOLOGY STACK
+==================================================
+
+For each technology: what it is, why it is used here, and where it appears.
+
+------------------------------------------------------------------
+REACT 19  (react, react-dom)
+------------------------------------------------------------------
+WHAT IT IS
+    A JavaScript library for building user interfaces out of components.
+    A component is a function that returns the UI it should render. When the
+    data a component uses changes, React re-renders just that part of the page.
+
+WHY IT IS USED HERE
+    The whole UI is made of components. The app needs to react to data
+    changing (a list of doctors arriving, a user logging in, a favorite being
+    toggled) without manually touching the DOM.
+
+WHERE IT APPEARS
+    Everywhere. `src/main.jsx` mounts the app, `src/App.jsx` is the root
+    component, `src/pages/*` are one component per route, and
+    `src/components/**` are the reusable pieces.
+
+    Specifically used React features in this project:
+    - Function components (all of them)
+    - Hooks: useState, useEffect, useMemo, useCallback, useRef, useContext
+    - React.lazy + Suspense for route-level code splitting
+    - createPortal for the toast container and the dialog
+    - createContext for the toast system
+    - StrictMode in main.jsx
+
+    Not implemented: class components, custom render props, hooks like
+    useReducer or useTransition.
+
+------------------------------------------------------------------
+VITE 8
+------------------------------------------------------------------
+WHAT IT IS
+    A build tool and development server. In development it serves the source
+    files as native ES modules (so there is no bundling step while you work),
+    and for production it bundles and minifies everything into `dist/`.
+
+WHY IT IS USED HERE
+    Three concrete reasons:
+    1. `npm run dev` starts a dev server with hot module replacement, so
+       editing a file updates the browser instantly.
+    2. It provides the development PROXY that forwards `/api/*` to
+       json-server, which is how this project avoids CORS problems.
+    3. It reads environment variables that start with `VITE_` and inlines
+       them at build time (this is how VITE_API_URL reaches the code).
+
+WHERE IT APPEARS
+    `vite.config.js` (plugins + the `/api` proxy), `index.html` (the entry
+    HTML with `<script type="module" src="/src/main.jsx">`), and the npm
+    scripts `dev`, `build`, `preview`.
+
+------------------------------------------------------------------
+JAVASCRIPT + JSX
+------------------------------------------------------------------
+WHAT IT IS
+    Plain JavaScript (ES modules: `import` / `export`). JSX is the HTML-like
+    syntax inside JavaScript that describes UI elements; Vite compiles it into
+    function calls.
+
+WHY IT IS USED HERE
+    It is the language React is written in. The project is deliberately
+    JavaScript, not TypeScript.
+
+WHERE IT APPEARS
+    Every `.js` and `.jsx` file.
+
+------------------------------------------------------------------
+REACT ROUTER 7  (react-router-dom)
+------------------------------------------------------------------
+WHAT IT IS
+    The client-side routing library. It maps URL paths to components and
+    changes the page without a full browser reload.
+
+WHY IT IS USED HERE
+    The app has ten different screens that must be reachable by URL, some of
+    them dynamic (`/doctors/:id`), some of them restricted to logged-in users,
+    and one catch-all for unknown URLs.
+
+WHERE IT APPEARS
+    `src/routes/router.jsx` — `createBrowserRouter` with a nested route tree.
+    `src/components/layout/Layout.jsx` — `<Outlet />` renders the matched page.
+    `src/components/auth/ProtectedRoute.jsx` — `Navigate` + `useLocation`.
+    Pages use `Link`, `NavLink`, `useNavigate`, `useParams`.
+
+------------------------------------------------------------------
+ZUSTAND 5
+------------------------------------------------------------------
+WHAT IT IS
+    A very small state management library. A "store" is created with
+    `create()`, holds state, and exposes actions that update that state.
+    Components subscribe to the pieces they need with a selector.
+
+WHY IT IS USED HERE
+    Some data is needed by components that are far apart in the tree:
+    - "who is logged in" is needed by the Navbar, the route guard and the
+      pages
+    - the profile is needed by the Navbar (the red dot), the Profile page and
+      the booking form
+    - favorites are needed by every doctor card and the details page
+    - the theme is needed by the Navbar and by the whole document
+    Passing this through props would mean threading it through several layers
+    of components that do not care about it ("prop drilling"). Context could
+    work, but Zustand also gives persistence via middleware, which this
+    project uses for three of the four stores.
+
+WHERE IT APPEARS
+    `src/stores/useAuthStore.js`, `useProfileStore.js`,
+    `useFavoritesStore.js`, `useThemeStore.js`.
+
+------------------------------------------------------------------
+AXIOS 1
+------------------------------------------------------------------
+WHAT IT IS
+    A promise-based HTTP client. `axios.get(url)` returns a promise that
+    resolves with a response object.
+
+WHY IT IS USED HERE
+    It allows one configured instance with a shared base URL and shared
+    headers, so the API location is defined in exactly one place instead of
+    being repeated in every request. It also gives a clear error object
+    (`error.response.status`) which the app uses to tell "404 not found" apart
+    from "the server is not running".
+
+WHERE IT APPEARS
+    Only in `src/services/api.js`. No component imports Axios directly.
+
+------------------------------------------------------------------
+JSON-SERVER 0.17
+------------------------------------------------------------------
+WHAT IT IS
+    A command-line tool that serves a JSON file as a full REST API. You give
+    it `db.json`, and it exposes each top-level key as an endpoint with GET,
+    POST, PUT, PATCH and DELETE.
+
+WHY IT IS USED HERE
+    The project's goal is to practise React and front-end data flow, not to
+    write a backend. json-server gives the frontend a real HTTP API to talk
+    to (real requests, real status codes, real latency, real persistence to a
+    file) without writing any server code.
+
+WHERE IT APPEARS
+    `db.json` (the data) and the npm script `api`
+    (`json-server db.json --port 3001`). The app reaches it through the Vite
+    proxy.
+
+    IMPORTANT: this is a mock server for development. It has no
+    authentication, no authorization, no validation and no concurrency
+    control. It is NOT a production backend.
+
+------------------------------------------------------------------
+REACT HOOK FORM 7
+------------------------------------------------------------------
+WHAT IT IS
+    A form library. You register inputs, and it tracks their values, validates
+    them and tells you whether the form is submitting.
+
+WHY IT IS USED HERE
+    There are five forms (login, signup, profile, appointment booking,
+    appointment editing). Writing the same value/onChange/error state by hand
+    for ~25 fields would be a lot of repetitive code. React Hook Form keeps
+    the inputs UNCONTROLLED — the values live in the DOM and are read on
+    submit, so typing does not re-render the whole form on every keystroke.
+
+WHERE IT APPEARS
+    `LoginPage.jsx`, `SignupPage.jsx`, `ProfilePage.jsx` (the ProfileForm
+    component) and `AppointmentForm.jsx` (reused by BookAppointmentPage and
+    EditAppointmentPage).
+
+    Not implemented: a schema validation library (zod/yup) or the
+    `@hookform/resolvers` package. All validation rules are declared inline in
+    the `register()` calls.
+
+------------------------------------------------------------------
+TAILWIND CSS 4
+------------------------------------------------------------------
+WHAT IT IS
+    A utility-first CSS framework. Instead of writing CSS classes, you compose
+    small utility classes in the markup (`flex items-center gap-2 rounded-lg`).
+
+WHY IT IS USED HERE
+    It keeps the styling next to the markup, which suits component-based code,
+    and it produces one small CSS file instead of a large hand-written
+    stylesheet.
+
+    The theming approach: all colors are CSS variables in `src/index.css`
+    (`--background`, `--primary`, `--border`, ...), exposed to Tailwind through
+    the `@theme inline` block. Dark mode simply redefines the same variables
+    under the `.dark` class. Every component uses semantic classes like
+    `bg-card` and `text-muted-foreground`, so no component needs to know which
+    theme is active.
+
+WHERE IT APPEARS
+    `src/index.css` (the design tokens, dark mode variables, keyframes) and
+    every component's className props. The Vite plugin is registered in
+    `vite.config.js`.
+
+------------------------------------------------------------------
+class-variance-authority + clsx + tailwind-merge
+------------------------------------------------------------------
+WHAT THEY ARE
+    - cva builds a component's class list from named variants, e.g.
+      `buttonVariants({ variant: 'outline', size: 'sm' })`
+    - clsx joins conditional class names together
+    - tailwind-merge resolves conflicts between Tailwind classes so the LAST
+      one wins (`p-2 p-4` -> `p-4` instead of both)
+
+WHY THEY ARE USED HERE
+    The UI primitives need variants (a destructive button, an outline button,
+    badge styles) and callers need to be able to override classes without
+    conflicts. `tailwind-merge` and `clsx` are combined into one helper:
+
+        // src/lib/utils.js
+        export function cn(...inputs) { return twMerge(clsx(inputs)) }
+
+WHERE THEY APPEAR
+    `src/components/ui/button.jsx` and `badge.jsx` and `alert.jsx` (cva),
+    `src/lib/utils.js` (clsx + tailwind-merge), and `cn()` is used in almost
+    every component.
+
+------------------------------------------------------------------
+lucide-react
+------------------------------------------------------------------
+WHAT IT IS
+    An icon library that exposes icons as React components
+    (`<Stethoscope className="h-4 w-4" />`).
+
+WHY IT IS USED HERE
+    The UI needs consistent icons (search, heart, calendar, log out, ...)
+    without shipping image files, and icons as components inherit `currentColor`
+    so they follow the theme automatically.
+
+WHERE IT APPEARS
+    The Navbar, Footer, every page and most components. Icons are almost always
+    marked `aria-hidden="true"` because they are decorative and the meaning is
+    in the text or in an `aria-label` on the button.
+
+------------------------------------------------------------------
+babel-plugin-react-compiler  (React Compiler)
+------------------------------------------------------------------
+WHAT IT IS
+    A build-time optimizer for React. It analyses components and inserts
+    memoization automatically, so you do not have to wrap things in
+    `React.memo`, `useMemo` and `useCallback` by hand.
+
+WHY IT IS USED HERE
+    It is the reason this codebase contains no manual `React.memo` at all.
+    Memoization happens at build time.
+
+WHERE IT APPEARS
+    `vite.config.js`:
+        babel({ presets: [reactCompilerPreset()] })
+    and the devDependencies `babel-plugin-react-compiler`,
+    `@babel/core`, `@rolldown/plugin-babel`.
+
+------------------------------------------------------------------
+oxlint
+------------------------------------------------------------------
+WHAT IT IS
+    A fast JavaScript/TypeScript linter.
+
+WHY IT IS USED HERE
+    To catch mistakes and enforce rules. `npm run lint`.
+
+WHERE IT APPEARS
+    `.oxlintrc.json` — with the React plugin and two rules:
+    `react/rules-of-hooks` (error) and `react/only-export-components` (warn).
+
+
+==================================================
+3. SYSTEM ARCHITECTURE
+==================================================
+
+The application is a client-side rendered SPA with a mock API behind it.
+
+THE LAYERS
+----------
+
+        User (browser)
+                ↓
+        React UI  (Tailwind + src/components/ui primitives)
+                ↓
+        Components / Pages  (src/pages, src/components/<feature>)
+                ↓
+        Zustand stores + hooks  (shared application state)
+                ↓
+        src/services/api.js  (one Axios instance)
+                ↓
+        Vite dev-server proxy:  /api/*  ->  http://localhost:3001/*
+                ↓
+        json-server  (REST endpoints)
+                ↓
+        db.json  (the data file)
+
+WHAT EACH LAYER IS RESPONSIBLE FOR
+----------------------------------
+1. UI primitives (`src/components/ui/*`)
+   Dumb, reusable presentational components: button, card, input, select,
+   label, textarea, badge, alert, dialog, pagination, skeleton, toast.
+   They know nothing about doctors, users or appointments.
+
+2. Feature components (`src/components/doctors`, `appointments`, `layout`,
+   `auth`)
+   Components that DO know about the domain: DoctorCard knows what a doctor
+   looks like, AppointmentForm knows which fields an appointment has.
+   They are still presentational — they receive data through props.
+
+3. Pages (`src/pages/*`)
+   One component per route. A page is where data is FETCHED, where loading and
+   error state lives, and where a feature component is wired to real data.
+   Example: DoctorsPage fetches doctors, owns the search/filter/page state, and
+   passes a slice of the result to `<DoctorList />`.
+
+4. Stores + hooks (`src/stores`, `src/hooks`)
+   State that outlives a single page or is needed in several places: the
+   session, the profile cache, favorites, the theme. Plus the two
+   cross-cutting hooks `useDebounce` and `useProfileSync`.
+
+5. Services (`src/services/api.js`)
+   The ONLY layer that knows HTTP exists. It owns the Axios instance, the base
+   URL, and one named function per API operation.
+
+6. json-server + db.json
+   The data. json-server reads and writes the JSON file, and the file is the
+   single source of truth for doctors, appointments and users.
+
+WHY THIS SHAPE MATTERS
+----------------------
+The flow of data is one-directional and easy to trace:
+
+    a component that needs data calls a function in api.js
+        ↓
+    the promise resolves
+        ↓
+    the result goes into component state (useState) OR into a Zustand store
+        ↓
+    React re-renders the components that read that state
+
+Nothing writes to the API as a side effect of rendering. All API calls happen
+either in an event handler (a form submit, a button click) or inside a
+`useEffect` (a page loading its data).
+
+
+==================================================
+4. PROJECT STRUCTURE
+==================================================
+
+    .
+    ├── db.json                  <- the mock database (3 collections)
+    ├── index.html               <- HTML shell + pre-paint theme script
+    ├── vite.config.js           <- plugins + the /api dev proxy
+    ├── .env.example             <- documents VITE_API_URL
+    ├── package.json             <- dependencies + 5 npm scripts
+    ├── .oxlintrc.json           <- linter configuration
+    └── src/
+        ├── main.jsx
+        ├── App.jsx
+        ├── index.css
+        ├── routes/router.jsx
+        ├── pages/               <- 10 files, one per route
+        ├── components/
+        │   ├── layout/          <- Layout, Navbar, Footer
+        │   ├── auth/            <- ProtectedRoute
+        │   ├── doctors/         <- DoctorCard, DoctorList, DoctorFilters,
+        │   │                       DoctorAvatar, DoctorCardSkeleton
+        │   ├── appointments/    <- AppointmentForm, AppointmentCard,
+        │   │                       AppointmentStatus, 2 skeletons
+        │   └── ui/              <- 12 reusable primitives
+        ├── stores/              <- 4 Zustand stores
+        ├── hooks/               <- useDebounce, useProfileSync
+        ├── services/api.js      <- the only HTTP layer
+        └── lib/utils.js         <- cn()
+
+THE FILES THAT MATTER MOST
+--------------------------
+src/main.jsx
+    The entry point. Mounts <App /> into <div id="root">.
+
+src/App.jsx
+    Wraps the router in <ToastProvider>. Very small on purpose: it has no
+    async session bootstrap, because the auth store rehydrates from
+    localStorage synchronously.
+
+src/routes/router.jsx
+    The whole route table, the lazy imports, the Suspense fallback and the
+    `protect()` helper that applies the route guard.
+
+src/services/api.js
+    The single Axios instance and every API function.
+
+src/stores/*.js
+    The four pieces of global state.
+
+src/index.css
+    The design tokens for both themes, plus the keyframes for all animations.
+
+WHY THE FOLDERS ARE ORGANISED THIS WAY
+--------------------------------------
+- `components/ui` vs `components/<feature>` separates "generic building
+  blocks" from "things that know about doctors/appointments". A ui component
+  can be reused anywhere; a feature component cannot.
+- `pages` is separate from `components` because pages are route targets, and
+  they have a different job: fetching data and owning page-level state.
+- `services` is separate because HTTP is an implementation detail that should
+  not leak into components. If the API moved tomorrow, only `api.js` changes.
+- `hooks` holds logic that is reused across components and is not a component
+  itself.
+
+
+==================================================
+5. APPLICATION STARTUP
+==================================================
+
+Step by step, what happens when you open the app.
+
+STEP 1 — index.html loads
+-------------------------
+The browser loads `index.html`. Before the React bundle runs, an inline
+`<script>` executes:
+
+    var saved = JSON.parse(localStorage.getItem('medicare-theme') || '{}').state
+    var theme = saved && saved.theme
+    if (theme === 'dark' ||
+        (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark')
+    }
+
+This adds the `dark` class to <html> BEFORE anything is painted, and it is
+wrapped in try/catch so corrupted storage falls back to light instead of
+breaking the page.
+
+WHY THIS EXISTS: without it, the page would paint in light mode first and then
+flip to dark once React ran — a visible "flash". This script is the fix.
+
+STEP 2 — the module graph is evaluated
+--------------------------------------
+`<script type="module" src="/src/main.jsx">` runs. Importing modules evaluates
+them, and along the way this happens:
+
+    main.jsx
+      imports './index.css'      -> the stylesheet is applied
+      imports App.jsx
+        imports routes/router.jsx
+          imports Layout -> Navbar -> the stores
+      ...
+
+When the store modules are evaluated:
+
+    useThemeStore.js   -> creates the store, reads localStorage
+                       -> calls applyThemeClass(theme) at import time, which
+                          re-applies the `dark` class on <html>
+    useAuthStore.js    -> persist middleware rehydrates `user` from
+                          localStorage key "medicare-auth-user" (SYNCHRONOUS)
+    useFavoritesStore  -> rehydrates the favorites array from
+                          "medicare-favorite-doctors"
+
+This is why the app knows who is logged in before it renders anything.
+
+STEP 3 — React renders
+----------------------
+    main.jsx:
+        createRoot(document.getElementById('root')).render(
+          <StrictMode><App /></StrictMode>
+        )
+
+StrictMode is a development-only wrapper. It deliberately double-invokes
+render functions and effects in development to surface bugs. Side effect: in
+development you may see the same API request twice in the Network tab. That is
+expected and does not happen in a production build.
+
+STEP 4 — App renders the router
+-------------------------------
+`App.jsx` renders `<ToastProvider>` (which provides the `toast()` function
+through context and renders the toast container with a portal) and inside it
+`<RouterProvider router={router} />`.
+
+STEP 5 — the router matches the URL
+----------------------------------
+`router.jsx` was already evaluated at import time, so the route tree exists.
+The router matches the current URL, renders `<Layout />`, and puts the matched
+page into Layout's `<Outlet />`.
+
+Layout renders:
+
+    <Navbar />                                    <- always
+    <main key={pathname} className="... animate-fade-in"> <Outlet /> </main>
+    <Footer />                                    <- always
+
+The `key={pathname}` means <main> is a NEW element on every route change, so
+the CSS fade-in animation replays. That is a page transition done with plain
+CSS, no animation library.
+
+Layout also calls `useProfileSync()`.
+
+STEP 6 — the profile is synchronised
+------------------------------------
+`useProfileSync()` reads the authenticated user's id and either loads or clears
+the profile:
+
+    userId exists  -> GET /users/:id  -> fill the profile store
+    userId null    -> clearProfile()
+
+STEP 7 — the page loads, lazily
+-------------------------------
+The matched page is a `React.lazy()` component, so its code has not been
+downloaded yet. React suspends and shows the `<Suspense>` fallback — a
+skeleton grid (`PageFallback`). The browser downloads that page's chunk, the
+component renders, and its own `useEffect` fires its data request.
+
+STEP 8 — data arrives
+---------------------
+While the request is in flight the page shows skeletons. When the promise
+resolves, the state is set and the real content renders. On failure, the error
+state renders with a "Try again" button.
+
+FULL SEQUENCE
+-------------
+
+    index.html
+        ↓
+    inline theme script  ->  dark class applied (no flash)
+        ↓
+    main.jsx  ->  index.css + App
+        ↓
+    store modules evaluate  ->  theme applied, session + favorites rehydrated
+        ↓
+    createRoot().render(<StrictMode><App/></StrictMode>)
+        ↓
+    App  ->  ToastProvider  ->  RouterProvider
+        ↓
+    router matches URL  ->  Layout (Navbar + main + Footer)
+        ↓
+    useProfileSync()  ->  GET /users/:id  (if logged in)
+        ↓
+    lazy page chunk downloads  ->  Suspense fallback (skeleton)
+        ↓
+    page renders  ->  its useEffect fetches data  ->  skeletons
+        ↓
+    data arrives  ->  content renders
+
+
+==================================================
+6. ROUTING
+==================================================
+
+REACT ROUTER, SET UP IN ONE FILE
+--------------------------------
+Everything is declared in `src/routes/router.jsx` using `createBrowserRouter`.
+There are no `<Routes>`/`<Route>` JSX trees anywhere and no separate route
+files — one table is the single source of truth.
+
+THE ROUTE STRUCTURE
+-------------------
+There is ONE parent route (`path: '/'`) whose element is `<Layout />`. Every
+page is a CHILD of it. That is what gives every page the same Navbar, Footer
+and page container without repeating them: Layout renders `<Outlet />`, and the
+Outlet is where the matched child appears.
+
+    path: '/'
+      element: <Layout />
+      children:
+        index: true          -> HomePage              PUBLIC
+        'doctors'            -> DoctorsPage           PUBLIC
+        'doctors/:id'         -> DoctorDetailsPage     PUBLIC
+        'login'              -> LoginPage             PUBLIC
+        'signup'             -> SignupPage            PUBLIC
+        'book'               -> BookAppointmentPage   PROTECTED
+        'book/:doctorId'      -> BookAppointmentPage   PROTECTED
+        'appointments'       -> AppointmentsPage      PROTECTED
+        'appointments/:id/edit' -> EditAppointmentPage PROTECTED
+        'profile'            -> ProfilePage           PROTECTED
+        '*'                  -> NotFoundPage          PUBLIC (catch-all)
+
+PUBLIC ROUTES
+-------------
+Home, doctors list, doctor details, login, signup and the 404 catch-all.
+Anyone can open these. Note that the doctor catalogue is public on purpose —
+you can browse before you have an account; you only need an account to book.
+
+PROTECTED ROUTES
+----------------
+Booking (both forms of the URL), the appointments list, the edit page and the
+profile page.
+
+The two URL forms of the booking page are worth noting:
+
+    /book              -> the form with an empty doctor dropdown (choose one)
+    /book/:doctorId    -> the same page with the doctor pre-selected
+
+Both render the SAME component; the only difference is whether `useParams()`
+returns an id. That is why one page covers both cases instead of two.
+
+ROUTE-LEVEL LAZY LOADING
+------------------------
+Every page component is declared with `React.lazy()`:
+
+    const DoctorsPage = lazy(() => import('../pages/DoctorsPage'))
+
+The arrow function is only CALLED when React first needs to render that
+component. So the initial download contains the layout, the router and the
+shared UI — not all ten pages. Each page becomes its own chunk in the build
+output (you can see this in `dist/assets/`, e.g. `DoctorsPage-*.js`).
+
+`Layout` is NOT lazy, because it is needed immediately on every route.
+
+SUSPENSE AND THE FALLBACK
+-------------------------
+A lazy component must be rendered inside a `<Suspense>` boundary, otherwise
+React throws. The router defines two small helpers:
+
+    function delay(page) {
+      return <Suspense fallback={<PageFallback />}>{page}</Suspense>
+    }
+
+    function protect(page) {
+      return <ProtectedRoute>{delay(page)}</ProtectedRoute>
+    }
+
+`PageFallback` is a skeleton that mirrors a typical page (a title bar plus a
+grid of six card placeholders), so the transition from "loading chunk" to
+"page with its own skeletons" looks continuous rather than blank.
+
+WHY THE GUARD IS OUTSIDE THE SUSPENSE BOUNDARY
+---------------------------------------------
+Look carefully at the order in `protect()`: ProtectedRoute is the OUTER
+element, Suspense is inner. When a logged-out user opens `/appointments`,
+ProtectedRoute returns `<Navigate to="/login" />` and never renders its
+children — so the lazy `import()` for AppointmentsPage is NEVER CALLED. The
+chunk is not even downloaded.
+
+That is a small but real benefit: protected code is not shipped to visitors who
+cannot use it.
+
+404 HANDLING
+------------
+`{ path: '*', element: delay(<NotFoundPage />) }` catches any URL that matched
+nothing else. Note that a bad doctor id is a different case: `/doctors/9999`
+DOES match `doctors/:id`, so the page renders and then has to deal with the API
+returning 404 — which DoctorDetailsPage does explicitly.
+
+NAVIGATION
+----------
+- `<Link>` / `<NavLink>` for normal navigation. NavLink is used in the Navbar
+  because it receives `isActive`, which the app uses to highlight the current
+  link.
+- `useNavigate()` for programmatic navigation after an action (after a booking
+  is created, after logging out).
+- `<Navigate>` for redirects (the route guard, and the "already logged in"
+  guard on the login and signup pages).
+
+
+==================================================
+7. AUTHENTICATION
+==================================================
+
+    READ THIS FIRST: this is DEMO authentication. It is a training project.
+    Accounts live in db.json, passwords are stored as PLAIN TEXT, and the
+    "logged in" decision is made in the browser. It demonstrates the FLOW of
+    authentication, not the SECURITY of authentication. Section 21 explains
+    what real authentication would require.
+
+The store responsible is `src/stores/useAuthStore.js`.
+
+WHAT THE STORE HOLDS
+--------------------
+    user: null | { id, name, email }
+
+Only three fields. The password is deliberately dropped when the session user
+is created:
+
+    const toSessionUser = (account) => ({
+      id: account.id, name: account.name, email: account.email,
+    })
+
+SIGNUP — STEP BY STEP
+---------------------
+    1. User fills the form (name, email, password, confirm password).
+       React Hook Form validates: required fields, email pattern, password at
+       least 6 characters, and passwords must match.
+
+    2. SignupPage calls the store:
+           const { error } = await signup(values)
+
+    3. The store normalises the email and checks for an existing account:
+           normalizeEmail(email)   -> trim + toLowerCase
+           findUserByEmail(email)  -> GET /users?email=...
+       json-server filters by ANY field through query parameters, so a query
+       string is all that is needed to search the users collection. It returns
+       an ARRAY of matches (empty if there is none).
+
+    4. If an account exists, the store returns
+       { error: 'An account with this email already exists.' } and the form
+       shows it. No exception is thrown.
+
+    5. Otherwise it creates the account:
+           POST /users  { name, email, password, phone: '' }
+       json-server assigns the next id and returns the created record.
+       Note `phone: ''` — the record itself carries the profile field, and it
+       starts empty. The `name` from signup SEEDS the profile.
+
+    6. The store immediately logs the new user in:
+           set({ user: toSessionUser(account) })
+       No second "now please log in" step.
+
+    7. Persist middleware writes { user } to localStorage.
+
+    8. SignupPage shows a toast and navigates to the page the user originally
+       wanted (or "/").
+
+LOGIN — STEP BY STEP
+--------------------
+    1. Form validates email + password.
+    2. login(values) -> normalizeEmail -> GET /users?email=...
+    3. const [account] = <result>   (take the first match)
+    4. if (!account || account.password !== password)
+           return { error: 'Invalid email or password.' }
+       THE SAME MESSAGE FOR BOTH CASES. This is intentional: if "no such
+       account" and "wrong password" gave different messages, the form could be
+       used to discover which emails are registered.
+    5. On success: set({ user: toSessionUser(account) }) and return { user }.
+    6. LoginPage navigates to `from` — the protected page the guard turned
+       them away from.
+    7. useProfileSync notices the new user id and loads that user's profile.
+
+WHY THE ACTIONS RETURN { error } INSTEAD OF THROWING
+---------------------------------------------------
+Every store action returns `{ user }` or `{ error }`. The pages then read:
+
+    const { error } = await login(values)
+    if (error) { setFormError(error); return }
+
+This keeps try/catch out of the components, gives both forms the same shape to
+work with, and makes the store the single place that decides what a failure
+means. The store itself catches network errors and converts them into a
+generic message ("Could not log you in. Please try again.").
+
+HOW THE AUTHENTICATED USER IS IDENTIFIED
+----------------------------------------
+By `useAuthStore.user`. That object is the session. Anything that needs to know
+"is someone logged in?" uses the shared selector:
+
+    export const selectIsAuthenticated = (state) => Boolean(state.user)
+
+Used by ProtectedRoute AND by the Navbar, so the guard and the UI can never
+disagree.
+
+HOW THE SESSION IS PERSISTED
+----------------------------
+    persist(..., {
+      name: 'medicare-auth-user',
+      partialize: (state) => ({ user: state.user }),
+    })
+
+- `name` is the localStorage key.
+- `partialize` chooses WHAT is stored. Here: only `user`. The store's functions
+  are not stored (they are not serialisable anyway), and no password is stored
+  because `toSessionUser` already removed it from the object.
+
+The rehydration is SYNCHRONOUS, because localStorage reads are synchronous.
+This has an important consequence: by the time the first render happens, the
+store already knows whether a user is logged in.
+
+That is why `ProtectedRoute` has no "checking..." state:
+
+    if (!isAuthenticated) return <Navigate to="/login" replace ... />
+    return children
+
+If rehydration were asynchronous (like reading from an API), this component
+would need a loading state, otherwise a logged-in user would be briefly
+redirected to /login on every page refresh. The synchronous read removes that
+whole class of bug.
+
+There is also no session bootstrap in App.jsx for the same reason — there is
+nothing to wait for.
+
+LOGOUT
+------
+    logout: () => {
+      useProfileStore.getState().clearProfile()
+      set({ user: null })
+    }
+
+TWO THINGS HAPPEN, AND THE ORDER MATTERS:
+
+1. `clearProfile()` — the profile store is an in-memory cache, not persisted.
+   If it were not cleared, the NEXT person to log in on the same browser could
+   see the previous user's name, email and phone until their own profile
+   finished loading. Clearing it first closes that window.
+
+2. `set({ user: null })` — the session ends, and the persist middleware
+   removes it from localStorage.
+
+The Navbar's `handleSignOut` then closes the mobile menu, shows a toast and
+navigates to "/".
+
+A NOTE ON A COMMENT IN THE CODE
+-------------------------------
+The comment block at the top of useAuthStore.js says "Logging out does not
+clear the profile". Read that as describing the SEPARATION of the two stores
+(the auth store owns no profile state) — the code is explicit that logout DOES
+call clearProfile. Judge behaviour by the code, and be ready to explain that
+the two stores are deliberately independent, with logout performing the extra
+cleanup step itself.
+
+PROTECTED ROUTES — HOW THEY WORK
+--------------------------------
+`src/components/auth/ProtectedRoute.jsx`:
+
+    export function ProtectedRoute({ children }) {
+      const location = useLocation()
+      const isAuthenticated = useAuthStore(selectIsAuthenticated)
+
+      if (!isAuthenticated) {
+        return <Navigate to="/login" replace state={{ from: location }} />
+      }
+      return children
+    }
+
+Three details worth explaining:
+
+1. `state={{ from: location }}` — the blocked location is handed to the login
+   page through router state. LoginPage reads:
+
+       const from = location.state?.from?.pathname || '/'
+
+   and navigates there after a successful login, so an interrupted flow
+   resumes instead of dumping the user on the home page. The signup page reads
+   the same value, and the link between the two pages passes `state` along so
+   switching from login to signup does not lose it.
+
+2. `replace` — the redirect REPLACES the history entry. Without it, pressing
+   Back from the login page would bounce to the protected page, which would
+   redirect again, trapping the user.
+
+3. It is a wrapper component, not a hook, so it can be used as an element in
+   the route table (`protect(<AppointmentsPage />)`).
+
+THE REVERSE GUARD
+-----------------
+LoginPage and SignupPage also check `isAuthenticated` and redirect away if it is
+true. Opening /login while already logged in shows nothing — you are sent to
+`from` (or "/"). This is why the pages import `Navigate`.
+
+WHAT IS **NOT** IMPLEMENTED
+---------------------------
+- No token, no JWT, no refresh token, no session cookie
+- No password hashing
+- No "remember me" / session expiry / idle timeout
+- No password reset
+- No role-based authorisation (all logged-in users are equal)
+- No server-side verification of anything: the API will happily serve any
+  request from anyone. The route guard is a UX convenience, not a security
+  boundary — editing localStorage can bypass it.
+
+
+==================================================
+8. PROFILE SYSTEM
+==================================================
+
+The key idea: the profile is NOT a separate thing. The profile fields are
+columns on the user's own record in the `users` collection. That is what makes
+every user's profile different, with no mapping code to maintain.
+
+WHERE THE DATA IS STORED
+------------------------
+In `db.json`, in the `users` array:
+
+    {
+      "id": 3,
+      "name": "Yousef Ali",
+      "email": "yousefali@gmail.com",
+      "password": "…",
+      "phone": "+201022244455566"
+    }
+
+`json-server` is the source of truth. The browser stores NOTHING about the
+profile.
+
+THE RELATIONSHIP
+----------------
+
+        Authenticated user (useAuthStore.user)
+                ↓
+        user.id          <- this is the link
+                ↓
+        GET /users/:id
+                ↓
+        the user record in db.json  ->  { id, name, email, password, phone }
+                ↓
+        the profile fields: name, email, phone
+                ↓
+        useProfileStore cache (in memory)
+                ↓
+        Navbar dot + Profile page + booking form pre-fill
+
+The password sits on the same record but is never read into the profile store
+and never copied into component state.
+
+WHY THE PROFILE IS ON THE USER RECORD (a likely question)
+--------------------------------------------------------
+Alternatives would have been:
+    (a) a separate `profiles` collection with a `userId` foreign key
+    (b) localStorage
+
+(a) would work but adds a second request and a join to maintain for three
+fields. (b) was rejected deliberately: localStorage is per-BROWSER, not
+per-account, so two accounts on one computer would collide, and the data would
+not follow the user to another device. Keeping the fields on the user record
+means the data is per-account and server-owned, which is what "the profile
+belongs to this user" should mean.
+
+THE STORE
+---------
+`src/stores/useProfileStore.js`:
+
+    state:   name, email, phone, userId, loading, error
+    actions: loadProfile(userId), saveProfile(values), clearProfile()
+    derived: selectIsProfileComplete
+
+The shape is kept FLAT (name/email/phone at the top level, not nested under a
+`profile` object) so consumers can read it directly:
+
+    useProfileStore((state) => state.name)
+
+NOT PERSISTED — AND THAT IS DELIBERATE
+--------------------------------------
+The auth store IS persisted; the profile store is NOT. Reasons:
+
+1. The data already lives on the server. Caching it in localStorage would
+   create a second copy that can go stale.
+2. Privacy: not persisting means one user's contact details cannot survive in
+   the browser into another user's session. There is simply nothing on disk to
+   leak.
+3. It must be re-fetched anyway, because the cached copy has to be verifiably
+   the CURRENT user's.
+
+HOW THE PROFILE IS LOADED
+-------------------------
+`src/hooks/useProfileSync.js` — one effect that handles every case:
+
+    export function useProfileSync() {
+      const userId = useAuthStore((state) => state.user?.id ?? null)
+      const loadProfile = useProfileStore((state) => state.loadProfile)
+      const clearProfile = useProfileStore((state) => state.clearProfile)
+
+      useEffect(() => {
+        if (userId == null) { clearProfile(); return }
+        loadProfile(userId)
+      }, [userId, loadProfile, clearProfile])
+    }
+
+    login        -> userId appears        -> load
+    page refresh -> userId restored       -> load
+    user switch  -> userId changes        -> load the NEW user
+    logout       -> userId becomes null   -> clear
+
+One effect, because all four situations are the same event: the authenticated
+user changed.
+
+It is called from `Layout`, not from the Profile page, because the Navbar needs
+the completion state on EVERY route (the red dot must be correct on the home
+page too).
+
+`loadProfile` has one more important detail:
+
+    if (get().userId !== userId) set({ ...emptyProfile })
+
+Before fetching, if the cached profile belongs to a DIFFERENT user, it is
+wiped immediately. Otherwise there would be a moment during a user switch where
+the previous user's name and phone were still on screen. Then:
+
+    set({ loading: true, error: null })
+    const user = await getUserById(userId)         // GET /users/:id
+    set({ name, email, phone, userId: user.id, loading: false })
+    // on failure: set({ loading: false, error: 'network' })
+
+HOW UPDATES ARE PERSISTED
+-------------------------
+    saveProfile: async (profile) => {
+      const { userId } = get()
+      if (userId == null) return { error: 'not-authenticated' }
+
+      const user = await updateUser(userId, {          // PATCH /users/:id
+        name: profile.name, email: profile.email, phone: profile.phone,
+      })
+      set({ name: user.name, email: user.email, phone: user.phone, userId: user.id })
+      return { user }
+    }
+
+TWO DETAILS TO EXPLAIN:
+
+1. PATCH, not PUT. A PUT would replace the whole record, and the payload does
+   not include the password — so PUT would DELETE the stored password. PATCH
+   merges the three fields and leaves everything else (including the password)
+   untouched.
+
+2. The cache is updated FROM THE RESPONSE, after the request resolves. So the
+   UI only ever shows what the server actually accepted. Optimistically
+   updating first would risk showing a change that was never saved.
+
+`saveProfile` returns `{ error: 'not-authenticated' }` when there is no user id,
+so the caller has a uniform result shape.
+
+HOW COMPLETION IS DETECTED
+--------------------------
+    export const selectIsProfileComplete = (state) =>
+      Boolean(state.name.trim() && state.email.trim() && state.phone.trim())
+
+A DERIVED selector: it computes the answer from the state instead of storing a
+boolean. There is no `isComplete` field that could drift out of sync with the
+actual fields.
+
+It is used in exactly two places — the Profile page (to choose between the saved
+view and the empty state) and the Navbar (the red dot) — so those two can never
+disagree.
+
+AN INTERESTING CONSEQUENCE: a freshly signed-up user already has `name` and
+`email` copied from their account, and only `phone` is empty. So in practice a
+new user's profile is incomplete purely because the phone number has not been
+added yet. That is exactly why the Navbar dot shows up right after signup.
+
+HOW THE AVATAR INITIALS WORK
+----------------------------
+`getInitials()` in `src/pages/ProfilePage.jsx`:
+
+    function getInitials(name) {
+      const words = name.trim().split(/\s+/).filter(Boolean)
+      if (words.length === 0) return ''
+      const first = words[0][0]
+      const second = words.length > 1 ? words[1][0] : ''
+      return (first + second).toUpperCase()
+    }
+
+    "Yousef Ali"          -> "YA"
+    "  Ahmed   Mohamed "  -> "AM"   (extra spaces collapse)
+    "John"                -> "J"    (single name)
+    ""                    -> ""     (no crash)
+
+`.filter(Boolean)` removes the empty strings produced by multiple spaces, which
+is what stops `words[0][0]` from throwing on messy input.
+
+Note there are TWO initials helpers in the project with different jobs:
+- `getInitials` in ProfilePage -> the user's own avatar
+- `initials` in DoctorAvatar   -> doctor avatars; it ALSO strips a leading
+  "Dr." so "Dr. Sarah Mitchell" becomes "SM" rather than "DS"
+
+DoctorAvatar also picks a background color deterministically:
+
+    palette[seed % palette.length]     // seed is the doctor's id
+
+So every doctor gets a stable color without any image assets, and the same
+doctor always looks the same.
+
+HOW THE NAVBAR NOTIFICATION WORKS
+---------------------------------
+In `src/components/layout/Navbar.jsx`:
+
+    const profileComplete = useProfileStore(selectIsProfileComplete)
+    const profileLoading  = useProfileStore((state) => state.loading)
+    const showProfileDot  = !profileComplete && !profileLoading
+
+    ...
+    {link.to === '/profile' && showProfileDot && <ProfileDot />}
+
+`ProfileDot` renders a small red circle plus an screen-reader-only text
+"(profile incomplete)". Three things make this work well:
+
+1. It is REACTIVE. The Navbar subscribes to the selector, so the dot disappears
+   the moment the profile is saved — no refresh, no manual sync.
+
+2. `!profileLoading` suppresses the dot while the profile is being fetched. On
+   login, the profile is briefly unknown; without this, a user WITH a complete
+   profile would see a stale dot flash for a moment before it cleared.
+
+3. The dot appears in BOTH the desktop nav and the mobile menu, because the
+   same `showProfileDot` flag is used in both render branches.
+
+WHY THE PROFILE PAGE HAS BOTH A FORM AND A VIEW
+-----------------------------------------------
+ProfilePage switches between four visual states from ONE route (there is no
+`/profile/edit` URL):
+
+    error        -> ErrorAlert with a Try again button
+    loading      -> a skeleton card
+    editing      -> ProfileForm (Add or Edit)
+    complete     -> ProfileView (initials avatar, name, email, phone, Edit button)
+    !complete    -> EmptyProfile ("Profile not set" + Add Profile button)
+
+`const [editing, setEditing] = useState(false)` is all the state needed. The
+form is the same component for both Add and Edit — it is pre-filled from the
+store's current values, and only the button label and heading change
+(`isComplete ? 'Save changes' : 'Save profile'`).
+
+The toast message also depends on the state BEFORE saving:
+
+    const wasComplete = isComplete
+    ... "Profile saved."  (first time)
+    ... "Profile updated." (afterwards)
+
+WHAT IS **NOT** IMPLEMENTED
+---------------------------
+- No avatar image upload (initials only)
+- No date of birth, gender, address, medical history — the profile is exactly
+  name, email and phone
+- No password change from the profile page
+- No email verification
+
+
+==================================================
+9. ZUSTAND
+==================================================
+
+WHAT ZUSTAND IS
+---------------
+A small state management library. You call `create()` with a function that
+receives `set` (to update state) and `get` (to read current state), and it
+returns a hook:
+
+    export const useProfileStore = create((set, get) => ({
+      name: '',
+      setName: (name) => set({ name }),
+    }))
+
+A component then subscribes to just the piece it needs:
+
+    const name = useProfileStore((state) => state.name)
+
+The component re-renders only when THAT slice changes. The store itself lives
+outside React, so any module can read it without being a component:
+
+    useProfileStore.getState().clearProfile()
+
+WHY IT IS USED IN THIS PROJECT
+------------------------------
+Because four pieces of state are needed by components that are far apart:
+
+    useAuthStore.user        -> Navbar, ProtectedRoute, pages, LoginPage
+    useProfileStore          -> Navbar (dot), ProfilePage, BookAppointmentPage
+    useFavoritesStore        -> every DoctorCard, DoctorDetailsPage, DoctorsPage
+    useThemeStore            -> Navbar, <html> class
+
+Without a store this would be prop drilling: Props -> Layout -> Navbar, and
+Props -> Layout -> Outlet -> Page -> List -> Card. Components in the middle
+would carry data they do not use.
+
+WHY NOT CONTEXT
+---------------
+React Context could share this state, but it has two drawbacks for this
+project:
+1. The `persist` middleware gives localStorage persistence in three lines. With
+   Context you would write the read/write/parse yourself.
+2. Context re-renders every consumer when the value changes (unless split
+   carefully). Zustand's selectors let a component subscribe to one field, so
+   toggling a favorite does not re-render components that only care about the
+   theme.
+
+WHY NOT REDUX
+-------------
+Redux would work but is far heavier than needed: actions, reducers, a provider,
+and usually more boilerplate. This project has four small pieces of state, so a
+small library is the right size.
+
+THE FOUR STORES
+---------------
+
+------------------------------------------------------------------
+1. useAuthStore — "who is logged in"
+------------------------------------------------------------------
+    FILE      src/stores/useAuthStore.js
+    STATE     user: null | { id, name, email }
+    ACTIONS   signup({name,email,password})
+              login({email,password})
+              logout()
+    SELECTOR  selectIsAuthenticated
+    PERSISTED YES — key "medicare-auth-user", identity only (partialize)
+
+This store owns the SESSION ONLY. It does not fetch or hold profile data. The
+actions return `{ user }` or `{ error }` rather than throwing, so forms get a
+predictable result shape.
+
+`partialize` is the detail to highlight: it writes ONLY `user` to localStorage.
+The password never reaches the browser's storage because `toSessionUser()`
+already stripped it, and it is not part of the persisted subset even if it were.
+
+------------------------------------------------------------------
+2. useProfileStore — the current user's profile
+------------------------------------------------------------------
+    FILE      src/stores/useProfileStore.js
+    STATE     name, email, phone, userId, loading, error
+    ACTIONS   loadProfile(userId)   -> GET  /users/:id
+              saveProfile(values)   -> PATCH /users/:id
+              clearProfile()
+    SELECTOR  selectIsProfileComplete
+    PERSISTED NO — deliberately in-memory only
+
+This is a CACHE of server data, not a source of truth. `loading` and `error`
+are part of the store (rather than the page) because the Navbar needs to know
+whether the profile is still loading, on every route.
+
+------------------------------------------------------------------
+3. useFavoritesStore — favorite doctors
+------------------------------------------------------------------
+    FILE      src/stores/useFavoritesStore.js
+    STATE     favorites: number[]   (doctor ids)
+    ACTIONS   toggleFavorite(doctorId)
+              isFavorite(doctorId)      <- reads via get()
+    PERSISTED YES — key "medicare-favorite-doctors"
+
+    toggleFavorite: (doctorId) =>
+      set((state) => ({
+        favorites: state.favorites.includes(doctorId)
+          ? state.favorites.filter((id) => id !== doctorId)
+          : [...state.favorites, doctorId],
+      }))
+
+Note it uses the FUNCTIONAL form of `set`: the new array is derived from the
+current state, so it cannot be stale. It also never mutates the existing array
+— it returns a new one (filter / spread). That matters in React: mutation would
+not be detected as a change.
+
+ONLY IDS ARE STORED, never whole doctor objects. Two benefits:
+1. The list stays tiny.
+2. It cannot go stale. If a doctor's fee or rating changes on the server, the
+   favorite list still just says "id 7"; the current data comes from the API.
+
+------------------------------------------------------------------
+4. useThemeStore — light / dark
+------------------------------------------------------------------
+    FILE      src/stores/useThemeStore.js
+    STATE     theme: 'light' | 'dark'
+    ACTIONS   toggleTheme()
+    PERSISTED YES — key "medicare-theme"
+
+    function applyThemeClass(theme) {
+      document.documentElement.classList.toggle('dark', theme === 'dark')
+    }
+
+    theme: getInitialTheme()   // window.matchMedia('(prefers-color-scheme: dark)')
+
+    toggleTheme: () => {
+      const next = get().theme === 'dark' ? 'light' : 'dark'
+      applyThemeClass(next)
+      set({ theme: next })
+    }
+
+On a FIRST visit the theme follows the operating system. Once the user toggles,
+their explicit choice is persisted and always wins afterwards.
+
+`applyThemeClass(useThemeStore.getState().theme)` is also called at the BOTTOM
+of the module, i.e. at import time, before React renders. Combined with the
+inline script in index.html, the correct theme is in place before the first
+paint — no flash of the wrong theme.
+
+STATE THAT IS **NOT** IN A STORE (and why)
+------------------------------------------
+- Doctor list, appointment list, single doctor, single appointment
+  -> local `useState` in the page that needs them. Nothing else uses them.
+- Search text, specialty filter, favorites-view toggle, current page number
+  -> local to DoctorsPage. They are UI state for one screen; putting them in a
+  global store would be over-engineering.
+- `editing` on the Profile page, `cancelTarget` on the Appointments page
+  -> local UI state.
+
+The rule applied: global state is for data that is SHARED or must SURVIVE
+navigation/logout. Everything else stays local.
+
+
+==================================================
+10. API LAYER
+==================================================
+
+ONE FILE, ONE AXIOS INSTANCE
+----------------------------
+`src/services/api.js` is the entire HTTP layer. No component imports Axios.
+
+    import axios from 'axios'
+
+    const api = axios.create({
+      baseURL: import.meta.env.VITE_API_URL || '/api',
+      headers: { 'Content-Type': 'application/json' },
+    })
+
+    const unwrap = (response) => response.data
+
+TWO THINGS TO EXPLAIN:
+
+1. `baseURL` — from the environment variable, falling back to `/api`. Because
+   every call is written as a RELATIVE path (`api.get('/doctors')`), changing
+   where the API lives is a one-line change in one file. Note `import.meta.env`
+   is Vite's mechanism: only variables prefixed with `VITE_` are exposed, and
+   they are inlined at BUILD time.
+
+2. `unwrap` — Axios resolves with a full response object
+   (`{ data, status, headers, config }`), but callers only ever want the body.
+   `unwrap` extracts `.data`, so `getDoctors()` resolves with the ARRAY, not
+   with a response object. Every exported function ends with `.then(unwrap)`.
+
+THE FUNCTIONS
+-------------
+    Doctors
+      getDoctors()                  GET    /doctors
+      getDoctorById(id)             GET    /doctors/:id
+
+    Appointments
+      getAppointments()             GET    /appointments
+      getAppointmentById(id)        GET    /appointments/:id
+      createAppointment(data)       POST   /appointments
+      updateAppointment(id, data)   PUT    /appointments/:id
+      deleteAppointment(id)         DELETE /appointments/:id
+
+    Users (mock authentication + profile)
+      findUserByEmail(email)        GET    /users?email=...
+      createUser(user)              POST   /users
+      getUserById(id)               GET    /users/:id
+      updateUser(id, changes)       PATCH  /users/:id
+
+CONCEPTUAL EXAMPLES
+-------------------
+
+    // GET — read a collection
+    export function getDoctors() {
+      return api.get('/doctors').then(unwrap)          // -> Doctor[]
+    }
+
+    // GET with a query parameter (json-server filters on any field)
+    export function findUserByEmail(email) {
+      return api.get('/users', { params: { email } }).then(unwrap)
+      // axios turns { params: { email } } into  /users?email=...
+      // json-server returns an ARRAY of matches ([] if none)
+    }
+
+    // GET one — 404s if the id does not exist
+    export function getDoctorById(id) {
+      return api.get(`/doctors/${id}`).then(unwrap)
+    }
+
+    // POST — create; json-server assigns the id and returns the new record
+    export function createAppointment(appointment) {
+      return api.post('/appointments', appointment).then(unwrap)
+    }
+
+    // PUT — replace. Used for appointments, where the form sends every field.
+    export function updateAppointment(id, appointment) {
+      return api.put(`/appointments/${id}`, appointment).then(unwrap)
+    }
+
+    // PATCH — partial update. Used for the profile so the stored password,
+    // which is not in the payload, is not wiped.
+    export function updateUser(id, changes) {
+      return api.patch(`/users/${id}`, changes).then(unwrap)
+    }
+
+    // DELETE — remove
+    export function deleteAppointment(id) {
+      return api.delete(`/appointments/${id}`).then(unwrap)
+    }
+
+PUT vs PATCH — THE ACTUAL RULE USED HERE
+----------------------------------------
+- `PUT /appointments/:id` — the edit form submits the complete appointment
+  (patient name, email, phone, doctor, date, time, note, plus the preserved
+  status). A full replacement is exactly right, so PUT is correct.
+- `PATCH /users/:id` — the profile form submits only name, email and phone. A
+  PUT would replace the record and DROP the password field. PATCH merges.
+
+HOW REACT COMMUNICATES WITH JSON-SERVER
+---------------------------------------
+
+    Component / store action
+            ↓
+    api.get('/doctors')
+            ↓
+    Axios builds the full URL from baseURL:  /api/doctors
+            ↓
+    The request goes to the Vite DEV SERVER (same origin, port 5173)
+            ↓
+    Vite's proxy matches the '/api' prefix and forwards it:
+        target: 'http://localhost:3001'
+        changeOrigin: true
+        rewrite: path => path.replace(/^\/api/, '')
+            ↓
+    json-server receives GET /doctors on port 3001
+            ↓
+    It reads db.json and responds with JSON + status 200
+            ↓
+    Axios resolves the promise
+            ↓
+    .then(unwrap) extracts response.data  ->  the array
+            ↓
+    The caller puts it into state  ->  React re-renders
+
+WHY THE PROXY EXISTS
+--------------------
+The browser's same-origin policy would block a page on localhost:5173 from
+reading a response from localhost:3001 (different port = different origin),
+unless the server sends CORS headers. Because the frontend requests `/api/...`
+on its OWN origin and the DEV SERVER forwards it, the browser sees a normal
+same-origin request. No CORS configuration is needed.
+
+IMPORTANT CONSEQUENCE: the proxy is configured under `server:` in
+vite.config.js, which applies to `npm run dev` ONLY. `npm run preview` serves
+the built files and does NOT proxy, so the production build needs either
+VITE_API_URL pointing at a real API URL, or a reverse proxy in front of the
+static files.
+
+WHAT IS **NOT** IN THIS LAYER
+-----------------------------
+- No request interceptor, so no auth header is attached to any request
+- No response interceptor, so there is no global error handling, no automatic
+  redirect on 401, and no retry logic
+- No request cancellation (no AbortController) — a fast route change does not
+  cancel an in-flight request
+- No caching or request de-duplication
+- No TypeScript types or runtime response validation
+
+
+==================================================
+11. DATABASE / JSON-SERVER
+==================================================
+
+WHAT JSON-SERVER IS
+-------------------
+A single command that turns a JSON file into a REST API:
+
+    npm run api
+    -> json-server db.json --port 3001
+
+It gives you, for every top-level key in the file:
+    GET    /doctors        list
+    GET    /doctors/1      one
+    POST   /doctors        create (assigns the next id)
+    PUT    /doctors/1      full replace
+    PATCH  /doctors/1      partial update
+    DELETE /doctors/1      delete
+plus query-parameter filtering, sorting and pagination.
+
+WHY IT IS THE RIGHT TOOL HERE
+-----------------------------
+The learning goal is React and front-end data flow. json-server provides a
+genuine HTTP API — real requests, real status codes (including 404), real
+persistence — so the frontend can be written exactly as it would be against a
+real backend, without the cost of building one.
+
+THE THREE COLLECTIONS
+---------------------
+
+------------------------------------------------------------------
+doctors  (50 records — SEED DATA, read-only in the app)
+------------------------------------------------------------------
+    {
+      "id": 1,
+      "name": "Dr. Sarah Mitchell",
+      "specialty": "Cardiology",
+      "description": "Consultant cardiologist focused on preventive heart care...",
+      "workingDays": ["Mon", "Tue", "Thu"],
+      "slots": ["09:00", "10:00", "11:00", "13:00", "14:00"],
+      "experienceYears": 14,
+      "consultationFee": 350,
+      "rating": 4.9,
+      "phone": "+1 (555) 010-2201",
+      "email": "sarah.mitchell@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    }
+
+The app only READS doctors. There is no UI to add or edit a doctor — they are
+the fixed catalogue.
+
+Note `workingDays` and `slots` are ARRAYS inside the record. json-server stores
+nested JSON fine, and the UI uses them directly (`doctor.slots.map(...)`,
+`doctor.workingDays.join(', ')`).
+
+------------------------------------------------------------------
+users  (registered accounts — READ and WRITTEN by the app)
+------------------------------------------------------------------
+    {
+      "id": 1,
+      "name": "Demo Patient",
+      "email": "demo@medicare.test",
+      "password": "demo1234",
+      "phone": "+1 (555) 010-1001"
+    }
+
+Written by:
+    POST  /users        on signup
+    PATCH /users/:id    on profile save
+
+This collection is BOTH the account table and the profile table — the profile
+fields (name, email, phone) live on the account record.
+
+PASSWORDS ARE PLAIN TEXT. GET /users returns them. That is acceptable for a
+local training demo and unacceptable in production; it should be stated openly
+rather than glossed over.
+
+------------------------------------------------------------------
+appointments  (currently EMPTY in the committed db.json)
+------------------------------------------------------------------
+    {
+      "id": 1,
+      "patientName": "Yousef Ali",
+      "email": "yousefali@gmail.com",
+      "phone": "+201022244455566",
+      "doctorId": 3,
+      "date": "2026-09-20",
+      "time": "10:00",
+      "note": "First visit",
+      "status": "scheduled"
+    }
+
+IMPORTANT: the committed db.json has an EMPTY appointments array, so a fresh
+run starts with no appointments and the "No appointments yet" empty state.
+Appointments appear as you create them in the app.
+
+`doctorId` is a NUMBER pointing at a doctor's id — that is the link between an
+appointment and a doctor. The appointments page resolves it using a lookup map
+built from the doctors list. There is NO `userId` field, which is a real
+limitation (see section 14).
+
+HOW CRUD MAPS TO THE UI
+-----------------------
+
+    CREATE  BookAppointmentPage
+              POST /appointments
+              body: form values + doctorId (Number) + status: 'scheduled'
+
+    READ    AppointmentsPage
+              GET /appointments  +  GET /doctors
+              (both in one Promise.all, because the card needs the doctor's name)
+
+            EditAppointmentPage
+              GET /appointments/:id  +  GET /doctors
+
+    UPDATE  EditAppointmentPage
+              PUT /appointments/:id
+              body: new form values + the status carried over from the loaded
+                    appointment (so editing does not change the status)
+
+    DELETE  AppointmentsPage (the "Cancel appointment" button)
+              DELETE /appointments/:id
+              then the local list is filtered to drop that id
+
+WHY THE FRONTEND UPDATES ITS OWN STATE AFTER A MUTATION
+-------------------------------------------------------
+    deleteAppointment(cancelTarget.id)
+      .then(() => {
+        setAppointments((current) => current.filter((a) => a.id !== cancelTarget.id))
+        ...
+      })
+
+The list is updated in place rather than re-fetching everything. The DELETE
+response already confirms the change, so a second GET would be a wasted round
+trip. The functional `setAppointments((current) => ...)` form is used so the
+filter is applied to the LATEST state, not to a captured stale copy.
+
+PERSISTENCE AND RESETTING
+-------------------------
+json-server writes changes back to `db.json` on disk. Consequences:
+- Signups and bookings SURVIVE an API restart.
+- To reset the app to its seed state, restore `db.json` (or empty the
+  appointments array).
+- It reads the file into memory, so editing db.json by hand while the server
+  runs may not be picked up until it is restarted.
+
+LIMITATIONS OF THIS "DATABASE"
+------------------------------
+- Not a real database: a JSON file, no indexes, no transactions, no
+  concurrency control. Two simultaneous requests can overwrite each other.
+- No validation of any kind — any JSON shape is accepted.
+- No authentication or authorization: any client can read or write any
+  collection, including all users' passwords.
+- No relations or foreign keys. `doctorId` is just a number with nothing
+  enforcing that the doctor exists.
+- It is a development tool, not a deployment target.
+
+
+==================================================
+12. DOCTORS SYSTEM
+==================================================
+
+FETCHING DOCTORS
+----------------
+`src/pages/DoctorsPage.jsx` owns everything:
+
+    const [doctors, setDoctors] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    const loadDoctors = () => {
+      setLoading(true)
+      setError(null)
+      getDoctors()
+        .then(setDoctors)
+        .catch(() => setError('Unable to load doctors. ...'))
+        .finally(() => setLoading(false))
+    }
+
+    useEffect(loadDoctors, [])
+
+Note `useEffect(loadDoctors, [])` — the function itself is the effect, run once
+on mount with an empty dependency array.
+
+The same function is passed to the error state's retry button
+(`onRetry={loadDoctors}`), so "Try again" re-runs exactly the same request as
+the initial load. That pattern is used on most pages that fetch. Two small
+variations exist and are worth knowing: DoctorDetailsPage inlines the same
+request again inside an arrow function rather than reusing a named one, and
+EditAppointmentPage's retry (`loadAppointment`) re-fetches only the appointment,
+not the doctor list — which is enough, since the doctors are already loaded.
+
+THE FOUR VISUAL STATES
+----------------------
+The render is a chain of ternaries:
+
+    loading                  -> <DoctorListSkeleton />   (6 skeleton cards)
+    error                    -> <ErrorAlert onRetry={loadDoctors} />
+    filteredDoctors.length 0 -> an empty state
+    otherwise                -> the summary line + list + pagination
+
+There are TWO different empty states, because the reason for emptiness differs:
+
+    view === 'favorites' -> "No favorite doctors yet"  (a heart icon, and a
+                            hint to tap the heart on a card)
+    otherwise            -> "No doctors found"          (a search icon, and a
+                            hint to try another name or specialty)
+
+Same layout, different message — the user is told what to do about it.
+
+THE THREE FILTERS, COMBINED
+---------------------------
+    const filteredDoctors = useMemo(() => {
+      const query = debouncedSearch.trim().toLowerCase()
+      return doctors.filter((doctor) => {
+        const matchesSearch = doctor.name.toLowerCase().includes(query)
+        const matchesSpecialty = specialty === 'all' || doctor.specialty === specialty
+        const matchesView = view === 'all' || favorites.includes(doctor.id)
+        return matchesSearch && matchesSpecialty && matchesView
+      })
+    }, [doctors, debouncedSearch, specialty, view, favorites])
+
+1. SEARCH — matches the DOCTOR NAME ONLY, case-insensitively, `includes` so it
+   is a substring match. (Specialty has its own control; search does not look
+   at it.) The placeholder says exactly this: "Search doctors by name...".
+2. SPECIALTY — an exact match against one value, or 'all'.
+3. VIEW — 'all' or 'favorites', checked against the favorites array.
+
+All three are ANDed, so they compose.
+
+`useMemo` matters here: this filter runs over 50 doctors. Without memoization it
+would re-run on every render, including unrelated ones.
+
+SEARCH — DEBOUNCING
+-------------------
+    const debouncedSearch = useDebounce(search, 400)
+
+The input is driven by `search` (so typing is instant — a controlled input must
+feel immediate), while the LIST reads `debouncedSearch`. `useDebounce` returns
+a copy of the value that only updates after 400 ms without a change.
+
+    keystroke -> search updates -> input re-renders instantly
+                               -> the timer restarts
+    ...400 ms of silence...
+                               -> debouncedSearch updates -> the list filters
+
+WHY: without it, typing "cardio" would filter the 50-doctor list six times. With
+it, the list filters once, after the user stops typing. The input never lags.
+
+SPECIALTY FILTER
+----------------
+The dropdown's options are DERIVED from the loaded data, not hard-coded:
+
+    const specialties = useMemo(
+      () => [...new Set(doctors.map((doctor) => doctor.specialty))].sort(),
+      [doctors],
+    )
+
+`new Set(...)` removes duplicates, the spread turns it back into an array, and
+`.sort()` makes the order stable. Two benefits: the list can never disagree with
+the data (add a doctor with a new specialty and the option appears), and there is
+no second source of truth to maintain.
+
+It is only computed when `doctors` changes.
+
+THE PAGE-RESET RULE
+-------------------
+    const handleSearchChange = (value) => { setSearch(value); setPage(1) }
+    const handleSpecialtyChange = (value) => { setSpecialty(value); setPage(1) }
+    const handleViewChange = (value) => { setView(value); setPage(1) }
+
+Every filter change resets to page 1. Reason: if you are on page 5 of the full
+list and then search for something with 3 results, page 5 no longer exists.
+Resetting avoids showing an empty page after a filter change.
+
+There is ALSO a safety net for the same problem arriving from another
+direction:
+
+    const safePage = Math.min(page, totalPages)
+
+The rendered page is clamped to the number of pages that actually exist, so even
+if a filter shrinks the results without a reset, the user is never stranded on a
+blank page.
+
+PAGINATION
+----------
+Purely CLIENT-SIDE. All 50 doctors are fetched once; the app slices them.
+
+    const DOCTORS_PER_PAGE = 6
+
+    const totalPages = Math.max(1, Math.ceil(filteredDoctors.length / DOCTORS_PER_PAGE))
+
+    const pagedDoctors = useMemo(() => {
+      const start = (safePage - 1) * DOCTORS_PER_PAGE
+      return filteredDoctors.slice(start, start + DOCTORS_PER_PAGE)
+    }, [filteredDoctors, safePage])
+
+6 per page is not arbitrary: the grid is up to 3 columns wide, so 6 fills
+exactly two full rows.
+
+The summary line is computed from the same numbers:
+
+    Showing {rangeStart}-{rangeEnd} of {filteredDoctors.length}
+    ... and "(filtered from 50)" when a filter is active
+
+so the user knows both how many match and how many exist in total.
+
+PAGINATION UI (`src/components/ui/pagination.jsx`)
+The control is more than prev/next buttons:
+
+    - Prev and Next buttons, disabled at the ends
+    - Numbered page buttons with ELLIPSES for long ranges
+    - The active page is marked `aria-current="page"`
+    - It returns `null` when there is only one page, so the control does not
+      appear when it would be useless
+    - It is RESPONSIVE: 7 slots on desktop, 5 on mobile
+
+`getPageItems(current, total, slots)` always returns exactly `slots` tokens
+(unless every page fits), e.g.
+
+    1 ... 3 [4] 5 ... 9
+
+WHY CONSTANT WIDTH MATTERS: if the number of tokens changed as you paged
+through, the Prev/Next buttons would shift position under the cursor. Keeping
+the count constant keeps the buttons still.
+
+The mobile slot count comes from a small local hook:
+
+    function useIsMobile() {
+      const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 640px)').matches)
+      useEffect(() => {
+        const media = window.matchMedia('(max-width: 640px)')
+        const onChange = (event) => setIsMobile(event.matches)
+        media.addEventListener('change', onChange)
+        return () => media.removeEventListener('change', onChange)
+      }, [])
+      return isMobile
+    }
+
+It uses `matchMedia` (not a resize listener) and CLEANS UP the listener on
+unmount, and it is initialised with a function so the media query runs once
+rather than on every render.
+
+DOCTOR LIST AND CARD
+--------------------
+`DoctorList` is a thin grid wrapper:
+
+    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      {doctors.map((doctor, index) => (
+        <div key={doctor.id} className="h-full animate-fade-in-up"
+             style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}>
+          <DoctorCard doctor={doctor} />
+        </div>
+      ))}
+    </div>
+
+Two details:
+- `key={doctor.id}` — React needs a stable identity per item so it can match
+  items between renders. Using the array index as the key would mis-associate
+  items when the list changes (e.g. after filtering).
+- The staggered animation delay is CAPPED at index 8 (`Math.min(index, 8) * 60`),
+  so the ninth and later cards all animate together instead of a long list
+  appearing one card at a time in slow motion.
+
+`DoctorCard` shows: initials avatar, name (a Link to the details page),
+specialty Badge, rating with a star, favorite heart, a two-line clamped
+description, working days, the first and last slot as a time range, the fee, and
+a "View details" button.
+
+THE FAVORITE BUTTON INSIDE THE CARD
+-----------------------------------
+    const handleToggleFavorite = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      toggleFavorite(doctor.id)
+    }
+
+The heart sits inside a card that also contains links. Without these two calls,
+clicking the heart could also trigger navigation. `preventDefault` stops the
+default action, `stopPropagation` stops the click from bubbling to the parent.
+It also has `aria-pressed={isFavorite}` and a dynamic `aria-label`, so the state
+is announced correctly.
+
+DOCTOR DETAILS PAGE
+-------------------
+Route `/doctors/:id`. `const { id } = useParams()` reads the id from the URL.
+
+    useEffect(() => {
+      setLoading(true); setError(null); setDoctor(null)
+      getDoctorById(id)
+        .then(setDoctor)
+        .catch((err) => {
+          setError(err.response?.status === 404 ? 'not-found' : 'network')
+        })
+        .finally(() => setLoading(false))
+    }, [id])
+
+THREE THINGS TO HIGHLIGHT:
+
+1. `[id]` in the dependency array — the effect re-runs when the id in the URL
+   changes, so navigating from one doctor to another re-fetches.
+2. `setDoctor(null)` at the start — the previous doctor is cleared, so the old
+   doctor's data cannot appear while the new one loads.
+3. TWO DIFFERENT ERRORS. A 404 means "this doctor does not exist" (a permanent
+   problem — show "Doctor not found" with a link back to the list). Anything
+   else means "the request failed" (a temporary problem — show a retry button).
+   Distinguishing them prevents offering a pointless retry for an id that will
+   never exist. `err.response?.status` uses optional chaining because a network
+   failure has NO `response` at all — without `?.`, reading `.status` would throw.
+
+The page shows the description, experience, working days, phone, email, location
+in a two-column detail grid, all the available time slots as pills, the
+consultation fee, a favorite toggle, and a "Book Appointment" link to
+`/book/:id`.
+
+`DoctorDetailsSkeleton` mirrors this exact layout, including 6 slot pills and the
+footer row, so there is no layout shift when the data arrives.
+
+WHAT IS **NOT** IMPLEMENTED
+---------------------------
+- No sorting control (by rating, fee or experience)
+- Server-side search/filter/pagination — all 50 doctors are fetched at once and
+  filtered in the browser
+- No availability checking: the slots are static data on the doctor; the app
+  does not check whether a slot is already booked
+- No reviews or a review form (the rating is seed data)
+
+
+==================================================
+13. FAVORITES
+==================================================
+
+HOW IT WORKS, EXACTLY
+---------------------
+FAVORITES ARE NOT STORED ON THE SERVER. There is no favorites endpoint and no
+favorites collection in db.json. Favorites are a client-side list of doctor ids
+persisted to localStorage.
+
+    FILE      src/stores/useFavoritesStore.js
+    STATE     favorites: number[]
+    PERSISTED localStorage key "medicare-favorite-doctors"
+
+    export const useFavoritesStore = create(
+      persist(
+        (set, get) => ({
+          favorites: [],
+          toggleFavorite: (doctorId) =>
+            set((state) => ({
+              favorites: state.favorites.includes(doctorId)
+                ? state.favorites.filter((id) => id !== doctorId)
+                : [...state.favorites, doctorId],
+            })),
+          isFavorite: (doctorId) => get().favorites.includes(doctorId),
+        }),
+        { name: 'medicare-favorite-doctors' },
+      ),
+    )
+
+THE TOGGLE IN DETAIL
+--------------------
+`toggleFavorite` is a single function for both directions — no separate add and
+remove. It uses the FUNCTIONAL `set((state) => ...)` form, which is important:
+the decision is made from the CURRENT state, so rapid clicks cannot act on a
+stale copy. It is also idempotent in effect — clicking twice returns to the
+original list.
+
+It never mutates the array. `filter` and the spread operator both create a NEW
+array, which is what React needs to detect the change. `state.favorites.push(id)`
+would mutate the existing array, and React would not necessarily re-render.
+
+WHY ONLY IDS ARE STORED
+-----------------------
+The alternative is storing whole doctor objects. Two reasons not to:
+
+1. SIZE — 50 full doctor objects (with descriptions, slots and contact details)
+   in localStorage versus a list of numbers.
+2. FRESHNESS — a stored copy of a doctor would become stale the moment the data
+   changes on the server. Storing only the id means the favorites list is purely
+   a SELECTION, and the actual doctor data always comes fresh from the API.
+
+THE UI IS NOT HARD-CODED
+------------------------
+    isFavorite: (doctorId) => get().favorites.includes(doctorId)
+
+is provided, but the COMPONENTS mostly do not use it — they subscribe to the
+array directly, because a call to `isFavorite()` inside a render would not
+re-render when the array changes:
+
+    const isFavorite = useFavoritesStore((state) => state.favorites.includes(doctor.id))
+
+Subscribing to the computed boolean means React re-renders the heart when that
+boolean flips. Same for the details page:
+
+    const isFavorite = useFavoritesStore((state) => state.favorites.includes(id))
+
+WHERE FAVORITES APPEAR IN THE UI
+--------------------------------
+1. `DoctorCard` — a heart button top-right, filled red (`fill-destructive
+   text-destructive`) when favorited. Handles preventDefault/stopPropagation.
+2. `DoctorDetailsPage` — a labeled "Favorite / Favorited" button with
+   `aria-pressed`.
+3. `DoctorsPage` — the "All Doctors / Favorites" segmented toggle:
+
+       const matchesView = view === 'all' || favorites.includes(doctor.id)
+
+   Switching to Favorites filters the same fetched list down to the ids in the
+   store. If nothing matches, the favorites-specific empty state is shown.
+
+Note the toggle is ORed into the same `filteredDoctors` as search and specialty,
+so "favorites" combines with the other filters rather than replacing them — you
+can search within your favorites.
+
+RESPONSIVENESS ACROSS COMPONENTS
+--------------------------------
+Because the store is global, hearting a doctor on the DETAILS page immediately
+updates the heart on that doctor's CARD, and the Favorites count on the list
+page — with no props, no callback and no shared parent. Each heart subscribes to
+the store independently.
+
+WHAT IS **NOT** IMPLEMENTED
+---------------------------
+- Favorites are NOT tied to the user account. They live in the browser, so:
+    - two users on the same browser SHARE one favorites list
+    - they do not follow a user to another device
+    - clearing browser storage loses them
+  Fixing this would mean storing favourites server-side, e.g. a `favorites`
+  collection or a `favoriteDoctorIds` field on the user record.
+- Favorites are not available while logged out in the sense of being saved to an
+  account — but they DO work while logged out, locally, which is intentional
+  (you can favorite before creating an account).
+- No "favorites" page of its own — it is a filter view on the doctors page.
+
+
+==================================================
+14. APPOINTMENT SYSTEM
+==================================================
+
+THE LIFECYCLE: CREATE -> READ -> UPDATE -> DELETE
+
+------------------------------------------------------------------
+CREATE — booking
+------------------------------------------------------------------
+ROUTE       /book  or  /book/:doctorId   (protected)
+PAGE        src/pages/BookAppointmentPage.jsx
+API         POST /appointments
+COMPONENT   src/components/appointments/AppointmentForm.jsx
+
+FLOW:
+
+    /book/:doctorId  ->  useParams() gives doctorId
+            ↓
+    useEffect -> getDoctors()   (the form needs the doctor dropdown)
+            ↓
+    AppointmentFormSkeleton while loading
+            ↓
+    form defaultValues:
+        patientName: profile.name   <- pre-filled from the profile store
+        email:       profile.email
+        phone:       profile.phone
+        doctorId:    doctorId ?? ''  <- preselected when coming from /book/:id
+        date: '', time: '', note: ''
+            ↓
+    user picks a date and a time (the doctor's own slots)
+            ↓
+    handleSubmit -> validation
+            ↓
+    onSubmit(values):
+        createAppointment({
+          ...values,
+          doctorId: Number(values.doctorId),   <- string -> number
+          status: 'scheduled',                 <- set here, not by the form
+        })
+            ↓
+    POST /api/appointments
+            ↓
+    .then  -> toast('Appointment booked successfully.') + navigate('/appointments')
+    .catch -> toast('Unable to book the appointment. Please try again.', 'error')
+              and setSubmitting(false) so the user can retry
+
+TWO DETAILS WORTH EXPLAINING:
+
+1. `doctorId: Number(values.doctorId)` — an HTML `<select>` always yields a
+   STRING, so a selected doctor arrives as "3". Converting it to 3 keeps the
+   stored data consistent with the doctor ids in db.json (which are numbers),
+   so the `doctorById[appointment.doctorId]` lookup on the appointments page
+   actually matches.
+
+2. `setSubmitting(false)` ONLY in the catch. On success the component navigates
+   away, so resetting the flag would be a state update on an unmounting
+   component for no reason.
+
+WHY THE FORM PRE-FILLS
+The whole point of the profile: you enter your details once, and every booking
+form arrives already filled. `BookAppointmentPage` reads three slices of the
+profile store:
+
+    const profileName  = useProfileStore((state) => state.name)
+    const profileEmail = useProfileStore((state) => state.email)
+    const profilePhone = useProfileStore((state) => state.phone)
+
+and uses them as the form's `defaultValues`.
+
+    NOTE: React Hook Form's `defaultValues` are applied when the form MOUNTS.
+    If the profile arrives after the form has mounted, the form does not
+    retroactively update. In this app the profile is loaded by `useProfileSync`
+    in Layout, so by the time a user navigates to /book it is normally already
+    in the store. The `|| ''` fallbacks keep the fields valid when it is not.
+
+THE TIME DROPDOWN FOLLOWS THE DOCTOR
+------------------------------------
+    const selectedDoctorId = watch('doctorId')
+    const selectedDoctor = doctors.find((d) => d.id === Number(selectedDoctorId))
+
+    const baseSlots = selectedDoctor?.slots ?? FALLBACK_SLOTS
+    const slots =
+      defaultValues.time && !baseSlots.includes(defaultValues.time)
+        ? [...baseSlots, defaultValues.time].sort()
+        : baseSlots
+
+`watch('doctorId')` makes the component re-render when the doctor changes, so
+the time options update live. Three cases:
+
+1. No doctor chosen yet -> the default slot list (`FALLBACK_SLOTS`, 09:00–16:00).
+2. A doctor is chosen   -> that doctor's own `slots` array from db.json.
+3. EDITING an appointment whose saved time is not in the new doctor's slots
+   -> the saved time is ADDED to the list and the result sorted, so the
+   currently-saved value stays selectable and is never silently lost.
+
+That third case is a small but thoughtful piece of defensive design.
+
+------------------------------------------------------------------
+READ — the appointments list
+------------------------------------------------------------------
+ROUTE  /appointments   (protected)
+PAGE   src/pages/AppointmentsPage.jsx
+API    GET /appointments  +  GET /doctors
+
+FLOW:
+
+    useEffect(loadData, [])
+            ↓
+    Promise.all([getAppointments(), getDoctors()])
+            ↓
+    both results stored; error -> a single error state
+            ↓
+    skeletons -> list
+
+WHY FETCH DOCTORS TOO: an appointment stores only `doctorId`, so to show the
+doctor's NAME, SPECIALTY and AVATAR each card needs the doctor record. Two
+requests run in PARALLEL with `Promise.all` rather than one after the other, so
+the page waits for the slower one instead of for both in sequence. If EITHER
+fails, the whole thing goes to the error state (Promise.all rejects on the first
+failure), which is correct — the list is not usable without the doctor names.
+
+A LOOKUP MAP INSTEAD OF A SEARCH PER CARD
+-----------------------------------------
+    const doctorById = useMemo(
+      () => Object.fromEntries(doctors.map((doctor) => [doctor.id, doctor])),
+      [doctors],
+    )
+
+    <AppointmentCard doctor={doctorById[appointment.doctorId]} />
+
+`Object.fromEntries` builds `{ 1: {...}, 2: {...} }` once. Each card then does a
+single key lookup — O(1) — instead of scanning the doctors array per card —
+O(n) per card, i.e. O(n*m) overall. With 50 doctors and 20 appointments that is
+1000 comparisons versus 20 lookups. It is memoized, so it is built once per
+doctors change, not on every render.
+
+SORTING
+-------
+    const sortedAppointments = useMemo(
+      () => [...appointments].sort((a, b) =>
+        `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`)
+      ),
+      [appointments],
+    )
+
+Most recent first. Because the date is stored as `YYYY-MM-DD` and the time as
+`HH:MM`, string comparison gives the same order as chronological comparison —
+no Date parsing required.
+
+TWO SUBTLETIES:
+1. `[...appointments]` — `.sort()` MUTATES the array it is called on. Copying
+   first avoids mutating the state array in place, which React would not detect
+   as a change (and which would be a side effect during render).
+2. `localeCompare` is used as the comparator, returning a number as required.
+
+WHAT THE CARD SHOWS
+-------------------
+Doctor avatar (or an "N/A" circle if the doctor is missing), doctor name,
+specialty, status badge, patient name, phone, the date formatted for humans
+(`toLocaleDateString` with weekday/month/day/year), the time, and the note if
+there is one — each row with an icon and an `sr-only` label.
+
+The date is parsed as `new Date(`${appointment.date}T00:00:00`)`. The explicit
+`T00:00:00` makes it a LOCAL time; without it, `"2026-09-20"` would be parsed as
+UTC midnight and could display as the previous day in a negative-offset
+timezone.
+
+`onCancel` is passed the WHOLE appointment object, not just its id, because the
+dialog needs the date, time and doctor to describe what is about to be deleted.
+
+------------------------------------------------------------------
+UPDATE — reschedule
+------------------------------------------------------------------
+ROUTE  /appointments/:id/edit   (protected)
+PAGE   src/pages/EditAppointmentPage.jsx
+API    GET /appointments/:id + GET /doctors, then PUT /appointments/:id
+
+FLOW:
+
+    Promise.all([getAppointmentById(id), getDoctors()])
+            ↓
+    error === 'not-found' (404 from the API) -> "Appointment not found."
+                                                + link back to the list
+    other error                              -> retryable ErrorAlert
+    loading (or appointment still null)      -> skeleton
+            ↓
+    AppointmentForm with defaultValues taken from the loaded appointment
+            ↓
+    onSubmit -> PUT /api/appointments/:id
+            ↓
+    toast + navigate('/appointments')
+
+WHY `status: appointment.status` IS INCLUDED
+--------------------------------------------
+    updateAppointment(appointment.id, {
+      ...values,
+      doctorId: Number(values.doctorId),
+      status: appointment.status,
+    })
+
+The form does not contain a status field (it is not something a patient
+edits), and PUT REPLACES the whole record. Without carrying the status over, it
+would be dropped from the record entirely. So the existing status is read from
+the loaded appointment and put back into the payload.
+
+WHY THE `onSubmit` HANDLER IS DECLARED BELOW THE GUARDS
+-------------------------------------------------------
+The component returns early for the not-found, error and loading cases. The
+`onSubmit` handler reads `appointment.id` and `appointment.status`, so it is
+defined AFTER those guards — at that point the appointment is guaranteed to be
+non-null and no optional chaining is needed. The code comments say this
+explicitly: "The appointment is guaranteed to be loaded here... Keep it below
+the guards above."
+
+Note the loading condition is `if (loading || !appointment)` — the `||
+!appointment` covers the brief moment before the fetch resolves, so the form
+cannot mount with an empty appointment.
+
+"DISCARD CHANGES" uses `navigate(-1)` — going BACK in history rather than to a
+fixed route, so it returns the user wherever they came from.
+
+------------------------------------------------------------------
+DELETE — cancel
+------------------------------------------------------------------
+WHERE  AppointmentsPage
+API    DELETE /appointments/:id
+UI     a confirmation Dialog
+
+FLOW:
+
+    "Cancel appointment" button on a card
+            ↓
+    setCancelTarget(appointment)         <- stores the whole object
+            ↓
+    <Dialog open={!!cancelTarget}>       <- the dialog is driven by that state
+            ↓
+    the description names the doctor, date and time and warns
+    "This action cannot be undone."
+            ↓
+    "Yes, cancel appointment"
+            ↓
+    setCancelling(true)
+    deleteAppointment(cancelTarget.id)
+            ↓
+    .then  -> filter it out of local state, close the dialog, success toast
+    .catch -> error toast (the dialog stays open so the user can retry)
+    .finally -> setCancelling(false)
+
+WHY A CONFIRMATION DIALOG
+Deleting is irreversible and this API keeps no history, so a single mis-click
+must not destroy an appointment. The dialog also restates exactly WHAT is being
+deleted (doctor, date, time) so the user confirms the right thing.
+
+The `cancelling` flag disables the button AND shows a spinner
+(`Loader2` with `animate-spin`), which prevents a double submission — the second
+click finds the button disabled.
+
+`<Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)} />`
+— the `!!` converts the object to a boolean for the `open` prop, and the dialog
+can only be closed (never "opened") from the outside; it opens by setting a
+cancel target.
+
+THE DIALOG COMPONENT
+It renders through a PORTAL into `document.body`, so it is not affected by any
+parent's overflow, z-index or transform. It closes on Escape and on clicking the
+overlay, locks body scrolling while open, and restores the scroll on close in
+the effect's cleanup function. Structure-wise it is minimal but correct:
+`role="dialog"` and `aria-modal="true"`.
+
+------------------------------------------------------------------
+STATUS
+------------------------------------------------------------------
+`AppointmentStatus` maps a status to a colored badge:
+
+    scheduled -> sky/blue
+    completed -> emerald/green
+    cancelled -> rose/red
+
+HONEST DETAIL: the app only ever WRITES `status: 'scheduled'` (on create). The
+`completed` and `cancelled` styles exist in the component, but nothing in the UI
+assigns those values, and cancelling DELETES the record rather than setting a
+status. `AppointmentCard` also hides the Cancel button when
+`appointment.status === 'cancelled'` — defensive handling for data that could
+exist in db.json (e.g. hand-edited) but that this UI cannot produce.
+
+So: the status field is real and displayed, but in practice it reads
+"scheduled" for every appointment the app creates.
+
+THE CONNECTION TO DOCTOR AND USER
+---------------------------------
+DOCTOR: yes, via `doctorId` (a number matching a doctor's id). The list page
+resolves it to a full doctor record for display.
+
+USER: NO. There is no `userId` on an appointment. The patient's name, email and
+phone are COPIED into the appointment record at booking time from the profile,
+but the record is not LINKED to the account that created it.
+
+CONSEQUENCE: `GET /appointments` returns the ENTIRE collection, so "My
+appointments" shows every appointment in db.json, whoever created it. On a
+single-user local demo this is invisible; with more than one account it is a
+real limitation. The fix would be to add `userId` to the appointment, set it at
+booking time, and filter by it — and ideally enforce it on the server, since a
+client-side filter alone would not be a security boundary.
+
+HOW THAT DATA GOT THERE: the three patient fields are part of the form (pre-
+filled from the profile). So the appointment carries a SNAPSHOT of the patient
+details at booking time — which is arguably correct behaviour for an
+appointment record (it should show who the appointment was for even if the
+profile later changes).
+
+WHAT IS **NOT** IMPLEMENTED
+---------------------------
+- No `userId`, so appointments are not scoped to the logged-in user
+- No "cancel" that keeps the record (it is a hard delete)
+- No slot-conflict detection: two appointments can be booked for the same
+  doctor at the same date and time. The app does not check existing bookings.
+- No past-appointment handling (no automatic "completed" status, no separate
+  upcoming/past sections), and no status filter or search on the list
+- No server-side pagination for appointments — the whole list is fetched
+- No email/SMS confirmation, no calendar export, no payment
+
+
+==================================================
+15. FORMS AND VALIDATION
+==================================================
+
+THE LIBRARY
+-----------
+React Hook Form 7. No schema validation library is installed — every rule is
+declared inline in the `register()` call.
+
+WHY IT IS USED
+--------------
+Five forms, roughly 25 fields. Hand-writing value state, onChange handlers and
+error state for each would be a lot of repetitive code, and every keystroke
+would re-render the form.
+
+React Hook Form keeps inputs UNCONTROLLED: the values live in the DOM and are
+read when needed. Typing does not re-render the whole form. You get `errors`,
+`isSubmitting`, `handleSubmit` and `watch` for free.
+
+THE PATTERN USED IN ALL FIVE FORMS
+----------------------------------
+
+    const {
+      register, handleSubmit, watch,
+      formState: { errors, isSubmitting },
+    } = useForm({ defaultValues: {...} })
+
+    <form noValidate onSubmit={handleSubmit(onSubmit)}>
+      <Input
+        id="email"
+        aria-invalid={!!errors.email}
+        {...register('email', {
+          required: 'Email is required',
+          pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email address' },
+        })}
+      />
+      <FieldError message={errors.email?.message} />
+    </form>
+
+- `register('field', rules)` connects the input and declares its rules.
+- `handleSubmit(onSubmit)` runs validation first and only calls `onSubmit` with
+  valid values. Invalids are blocked at the form.
+- `noValidate` turns OFF the browser's built-in validation bubbles, so all
+  feedback is rendered by the app consistently.
+- `aria-invalid={!!errors.email}` drives a red border through the Input's
+  `aria-invalid:border-destructive` class, and tells assistive technology the
+  field is invalid.
+- The small local `FieldError` component (defined in each form file) renders
+  `<p role="alert">` only when there is a message, so screen readers announce
+  the error.
+
+VALIDATION RULES ACTUALLY USED
+------------------------------
+    login        email:    required, email pattern
+                 password: required
+
+    signup       name:     required, min 2 characters
+                 email:    required, email pattern
+                 password: required, min 6 characters
+                 confirm:  required, must equal `watch('password')`
+
+    profile      name:     required, min 2 characters
+                 email:    required, email pattern /^[\w.+-]+@[\w-]+\.[\w.-]+$/
+                 phone:    required, pattern /^\+?[\d\s()-]{7,16}$/
+
+    appointment  patientName: required, min 2 characters
+                 email:       required, email pattern
+                 phone:       required, phone pattern
+                 doctorId:    required, and validate: value !== ''
+                 date:        required, and validate: notInPast
+                 time:        required, and validate: value !== ''
+                 note:        optional, max 200 characters
+
+THE CROSS-FIELD RULE (signup)
+-----------------------------
+    validate: (value) => value === watch('password') || 'Passwords do not match'
+
+`watch('password')` reads the current password field, so the confirmation is
+compared against the live value. The `||` returns the message string when the
+comparison fails; a validation function returning `true` passes and returning a
+string fails with that message.
+
+THE DATE RULE (appointment) — AND WHY IT IS DOUBLE-IMPLEMENTED
+--------------------------------------------------------------
+    function todayIsoDate() {
+      const now = new Date()
+      const offset = now.getTimezoneOffset() * 60_000
+      return new Date(now.getTime() - offset).toISOString().slice(0, 10)
+    }
+
+    function notInPast(value) {
+      return value >= todayIsoDate() || 'Date cannot be in the past'
+    }
+
+`todayIsoDate()` builds today's date as `YYYY-MM-DD` in the user's LOCAL
+timezone. The timezone-offset subtraction is the point: `toISOString()` converts
+to UTC, so in a timezone ahead of UTC, a plain `toISOString().slice(0,10)` could
+return yesterday's date (`slice(0,10)` keeps just the date part).
+
+The rule is used in TWO places:
+1. `validate: notInPast` — real validation, shown as an error message.
+2. `min={dateMin}` on the input, where `const dateMin = useMemo(() =>
+   todayIsoDate(), [])` — the native date picker greys out earlier dates.
+
+The `min` attribute is a convenience that stops most mistakes before they
+happen; the `validate` rule is the actual guarantee, because `min` can be
+bypassed (it is a UI hint, not a validation).
+
+Note the comparison is `value >= todayIsoDate()` — a STRING comparison. It is
+valid here only because both sides are `YYYY-MM-DD`, where lexicographic order
+equals chronological order.
+
+`dateMin` is memoized with `[]` because `todayIsoDate()` calls `new Date()`; it
+should be computed once when the form mounts, not on every render.
+
+SUBMISSION STATE
+----------------
+Two different mechanisms, used in different places:
+
+1. `isSubmitting` from React Hook Form — used on Login and Signup, where
+   `onSubmit` is async:
+
+       <Button type="submit" disabled={isSubmitting}>
+         {isSubmitting ? 'Logging in…' : 'Log in'}
+       </Button>
+
+2. An explicit `submitting` PROP — used on the appointment form, because the
+   submission is handled by the PAGE (which navigates on success), not inside
+   the form:
+
+       {submitting && <Loader2 className="animate-spin" />}
+       {submitting ? submittingLabel : submitLabel}
+
+Both disable the submit button, which prevents double submissions — important
+because a double POST would create two appointments.
+
+The appointment form also accepts `submittingLabel` with a default of 'Saving...',
+so one component serves both "Booking..." and "Saving...".
+
+FORM REUSE
+----------
+`AppointmentForm` is used by BOTH the booking page and the edit page. The
+differences are passed as props:
+
+    BOOK:  submitLabel="Book appointment", submittingLabel="Booking..."
+           defaultValues from the PROFILE, doctorId from the URL
+    EDIT:  submitLabel="Save changes"
+           defaultValues from the LOADED APPOINTMENT
+
+The form itself does not know or care which it is.
+
+FIELD ACCESSIBILITY
+-------------------
+- Every input has an `id` and a matching `<label htmlFor>`
+- `aria-invalid` when the field has an error
+- Errors render in a `role="alert"` paragraph
+- Icon-only buttons carry `aria-label`
+- `autoComplete` is set correctly: "email", "current-password",
+  "new-password", "name" — so password managers behave and the browser does not
+  autofill a NEW password into the LOGIN field
+
+WHAT IS **NOT** IMPLEMENTED
+---------------------------
+- No schema-based validation (zod/yup) — rules are inline
+- No server-side validation: json-server accepts anything
+- No async/remote validation (e.g. checking email availability as you type) —
+  the duplicate-email check happens on submit, inside the store
+- No field-level "touched" handling beyond what React Hook Form does internally
+
+
+==================================================
+16. UI/UX FEATURES
+==================================================
+
+LOADING STATES
+--------------
+Every data-driven view has an explicit loading branch. The pattern on every page
+is the same three flags:
+
+    const [data, setData]       = useState(null)
+    const [loading, setLoading] = useState(true)     <- true initially
+    const [error, setError]     = useState(null)
+
+    load() {
+      setLoading(true); setError(null)
+      fetch()
+        .then(setData)
+        .catch(() => setError(...))
+        .finally(() => setLoading(false))
+    }
+
+`loading` starts as `true` (not false), so the first render is the loading
+state rather than a flash of "no data".
+
+SKELETONS
+---------
+Five skeleton components, and they are all BUILT TO MIRROR THE REAL LAYOUT:
+
+    DoctorCardSkeleton        -> avatar circle, name bar, badge bar, rating,
+                                 two description lines, two detail rows,
+                                 footer with a price and a button
+    DoctorListSkeleton        -> the same 3-column grid as DoctorList, 6 cards
+    DoctorDetailsSkeleton     -> avatar, title, badge, description, 5 detail
+                                 rows, 6 slot pills, footer row
+    AppointmentCardSkeleton   -> avatar, name + status, 4 detail rows, 2 buttons
+    AppointmentFormSkeleton   -> card header, 6 labelled fields, a textarea,
+                                 and the submit button
+    PageFallback (router)     -> a title bar plus a 6-card grid, for lazy chunks
+
+WHY MIRROR THE LAYOUT: when the real content replaces the placeholder, the page
+does not jump. A generic spinner would cause exactly the layout shift these
+avoid, and it also fails to communicate WHAT is loading.
+
+The `Skeleton` primitive is a `bg-muted` block with a shimmer:
+
+    'relative overflow-hidden rounded-lg bg-muted',
+    'after:absolute after:inset-0 after:animate-shimmer after:bg-gradient-to-r
+     after:from-transparent after:via-foreground/10 after:to-transparent'
+
+The shimmer uses `bg-muted` and `foreground/10`, which come from the theme
+tokens — so it looks correct in BOTH light and dark mode without extra work.
+It is also `aria-hidden`, so screen readers ignore it.
+
+ERROR STATES
+------------
+One shared component: `ErrorAlert` (`src/components/ui/alert.jsx`), with a
+title, a message and an optional retry.
+
+    <ErrorAlert
+      title="Unable to load doctors."
+      message="Please check that the API server is running, then try again."
+      onRetry={loadDoctors}
+    />
+
+- `role="alert"` so it is announced
+- destructive styling (red border and tint)
+- The messages are ACTIONABLE, not generic. They tell the user the likely cause
+  (the API server is not running) and what to do (start it, then retry) — which
+  is also the quickest way for a developer to diagnose a missing `npm run api`.
+- `onRetry` re-runs the request. On DoctorsPage, AppointmentsPage and
+  BookAppointmentPage it is literally the same function the page loads with;
+  DoctorDetailsPage inlines the same request again, and EditAppointmentPage
+  re-fetches only the appointment.
+
+Usually it is passed inline in a ternary:
+
+    {loading ? <Skeleton/> : error ? <ErrorAlert onRetry={load}/> : <Content/>}
+
+There is also a toast for failed MUTATIONS (booking, saving, cancelling), because
+those happen in response to a click rather than on page load, and a full-page
+error banner would be the wrong shape for them.
+
+EMPTY STATES
+------------
+Three, each specific to its reason:
+
+    No appointments yet      -> calendar icon, "Book your first appointment to
+                                see it here." + a Book button (an ACTION, not
+                                just a message)
+    No favorite doctors yet  -> heart icon, "Tap the heart on a doctor card to
+                                save them here." (explains HOW)
+    No doctors found         -> search icon, "Try a different name or specialty."
+    Profile not set          -> "Please add your personal information to complete
+                                your profile and make booking appointments
+                                faster." + Add Profile button
+
+Each is a dashed-border panel with an icon, a heading, an explanation and
+usually a way out. None of them is `alert()` — the old habit this replaces is
+noted in the code comments.
+
+ANIMATIONS
+----------
+All defined in ONE place, `src/index.css`, as Tailwind `@theme` keyframes:
+
+    --animate-shimmer:    1.8s linear infinite   (skeletons)
+    --animate-fade-in:    0.25s ease-out         (page transition, dialog overlay)
+    --animate-fade-in-up: 0.35s ease-out         (cards, list items, error banners)
+    --animate-dialog-in:  0.2s ease-out          (dialog scale 0.96 -> 1)
+    --animate-toast-in:   0.25s ease-out         (slide in from the right)
+
+Three things worth explaining:
+
+1. NO animation library. The whole set is a few CSS keyframes.
+2. Durations are SHORT (0.2–0.4 s). Long animations make an app feel slow.
+3. STAGGERING: list items get an increasing delay, capped so long lists do not
+   crawl in:
+
+       style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+
+   Cards 0-8 cascade at 60 ms apart; everything from the ninth item onwards
+   animates together.
+
+THE PAGE TRANSITION is done with a `key`:
+
+    <main key={pathname} className="... animate-fade-in">
+
+Changing the key makes React treat `<main>` as a NEW element on every route
+change, so it remounts and the CSS animation replays. A transition with no
+library and no state.
+
+REDUCED MOTION
+--------------
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+For users who get motion sickness or have the OS setting enabled, all animation
+is effectively disabled. Note that durations are reduced rather than
+`display: none` — the animation still "happens", so anything relying on an
+animation ENDING (an element appearing) still ends up visible. Nothing is hidden.
+
+DARK / LIGHT MODE
+-----------------
+The full mechanism, end to end:
+
+    CSS       :root { --background: #f8fafc; --primary: #0d9488; ... }
+              .dark { --background: #0f172a; --primary: #14b8a6; ... }
+              @custom-variant dark (&:where(.dark, .dark *))
+              @theme inline { --color-primary: var(--primary); ... }
+
+    COMPONENTS  use semantic classes: bg-background, text-foreground, bg-card,
+                text-muted-foreground, border-border, bg-primary
+                (never a raw color like bg-slate-50)
+
+    STORE      toggling adds/removes the `dark` class on <html>
+
+    PERSISTED  localStorage "medicare-theme"
+
+    PRE-PAINT  an inline script in index.html applies the class before React runs
+
+Because components use semantic tokens, they need NO knowledge of the theme.
+Adding a theme would mean adding one block of variables.
+
+The two-layer `@theme inline` indirection exists so Tailwind utilities
+(`bg-primary`) read a CSS variable that the `.dark` class can override. If
+components used fixed colors, dark mode would require editing every component.
+
+NO FLASH: the inline script in `index.html` runs before the first paint, and
+`applyThemeClass` also runs at store-module import time. The theme is correct
+before anything is drawn. The script is wrapped in try/catch so corrupt
+localStorage cannot break the page.
+
+The toggle button shows the icon of the theme it switches TO (a sun while dark,
+a moon while light) and carries a matching `aria-label` and `title`, so the
+meaning is not carried by color alone.
+
+TOASTS
+------
+A small custom system, no dependency.
+
+    ToastProvider  — React context + a portal to document.body
+    useToast()     — returns { toast }
+    toast(message, type = 'success')   // types: success | error | info
+
+It renders a fixed stack at the bottom right, `role="status"`, each with an
+icon, the message, and a dismiss button. Auto-dismiss is 4 seconds; the stack is
+capped at 3 (`current.slice(-(TOAST_LIMIT - 1))` plus the new one) so repeated
+failures cannot fill the screen. Dismissal is animated: a `closing` flag is set
+first, then the toast is removed 200 ms later, so it fades out rather than
+vanishing.
+
+Timers are held in a `useRef(new Map())` so they survive re-renders and can be
+cleared when a toast is dismissed manually (otherwise the auto-dismiss timer
+would fire on an already-removed toast).
+
+WHERE TOASTS ARE USED: after every MUTATION — booking created, appointment
+updated, appointment cancelled, profile saved, account created, logged out — and
+after every FAILED mutation. Reads (page loads) use skeletons and error alerts
+instead.
+
+Toasts are rendered through a PORTAL into `document.body` so they are not
+clipped by any parent's overflow, and the container is `pointer-events-none`
+while the toasts themselves are `pointer-events-auto`, so the empty area does
+not block clicks on the page beneath.
+
+RESPONSIVE BEHAVIOUR
+--------------------
+- NAVBAR: at `md` and up, links are inline. Below that, a hamburger button
+  toggles a stacked mobile menu, with `aria-expanded` and an aria-label that
+  switches between "Open menu" and "Close menu".
+- GRIDS: `grid gap-5 sm:grid-cols-2 xl:grid-cols-3` — one column on phones, two
+  on tablets, three on large screens. The skeleton grids use the SAME classes,
+  so the layout does not jump.
+- FORMS: `grid gap-5 sm:grid-cols-2` — fields stack on phones, pair up above.
+- PAGINATION: 7 slots desktop, 5 mobile, so the control fits a narrow screen.
+- FILTERS: the search input and specialty select are `flex-col` on phones and
+  `flex-row` above.
+- CONTAINER: `mx-auto w-full max-w-6xl px-4 sm:px-6`.
+- AVATARS and detail rows collapse to a column on small screens
+  (`flex-col sm:flex-row`).
+
+ACCESSIBILITY DETAILS PRESENT IN THE CODE
+-----------------------------------------
+- `aria-label` on every icon-only button (favorite hearts, theme toggle, menu
+  toggle, clear search, pagination arrows)
+- `aria-pressed` on the favorite hearts and the All/Favorites toggle, so the
+  on/off state is exposed
+- `aria-current="page"` on the active pagination button
+- `aria-invalid` on invalid form fields
+- `role="alert"` on form field errors and error banners
+- `role="status"` on toasts
+- `role="dialog"` + `aria-modal="true"` on the dialog
+- `sr-only` labels for icon-only detail rows, and for the profile-dot text
+- Decorative icons marked `aria-hidden="true"`
+- Focus rings on all interactive elements (`focus-visible:ring-2`)
+- Headings used in order, with `aria-labelledby` linking page sections to them
+- Escape closes the dialog; clicking the overlay closes it too
+- Dialog locks background scrolling while open
+
+
+==================================================
+17. PERFORMANCE
+==================================================
+
+Strictly what is implemented. Nothing aspirational.
+
+1. ROUTE-LEVEL CODE SPLITTING
+   All ten pages use `React.lazy()`, so each becomes its own bundle chunk. The
+   initial download carries the layout, the router and the shared UI — not all
+   ten pages. `Layout` is intentionally NOT lazy because every route needs it
+   immediately.
+
+2. SUSPENSE FALLBACKS
+   Each lazy route is wrapped in `<Suspense fallback={<PageFallback />}>`. While
+   a chunk downloads, a skeleton is shown rather than a blank screen.
+
+   Bonus: the route guard sits OUTSIDE the Suspense boundary, so for a logged-out
+   visitor the lazy `import()` of a protected page is never invoked — the chunk
+   is not downloaded at all.
+
+3. REACT COMPILER
+   Enabled in `vite.config.js` via `babel({ presets: [reactCompilerPreset()] })`.
+   It memoizes components at BUILD time, which is why there is no manual
+   `React.memo` anywhere in this codebase. This is the modern alternative to
+   sprinkling memoization by hand.
+
+4. DEBOUNCED SEARCH
+   `useDebounce(search, 400)` — the doctor list re-filters once, 400 ms after
+   typing stops, instead of on every keystroke. Typing "cardiology" would
+   otherwise run the filter ten times. The input stays instant because it is
+   driven by the raw value, not the debounced one.
+
+   The implementation also cancels correctly:
+
+       useEffect(() => {
+         const timer = setTimeout(() => setDebouncedValue(value), delay)
+         return () => clearTimeout(timer)      // <- cancels the PREVIOUS timer
+       }, [value, delay])
+
+   The cleanup function runs before the next effect, so only one timer is ever
+   pending. That cleanup is the whole mechanism.
+
+5. CLIENT-SIDE PAGINATION
+   Only 6 of the filtered doctors are rendered at a time. The DOM stays small
+   (and therefore scrolling and painting stay fast) no matter how many doctors
+   the API returns.
+
+6. MEMOIZED DERIVATIONS (`useMemo`)
+   Used where the computation is non-trivial and the result feeds rendering:
+
+       DoctorsPage        specialties       (Set + map + sort over 50 doctors)
+                          filteredDoctors   (the three-filter pass)
+                          pagedDoctors      (the slice)
+       AppointmentsPage   doctorById        (the O(1) lookup map)
+                          sortedAppointments (copy + sort)
+       AppointmentForm    dateMin           (so new Date() runs once)
+
+   Each has a correct dependency array, so the work is skipped when the inputs
+   have not changed.
+
+7. STABLE CALLBACKS (`useCallback`)
+   Used in `ToastProvider` for `dismiss` and `toast`, so the context value
+   (`useMemo(() => ({ toast }), [toast])`) does not change on every render and
+   re-render every consumer.
+
+8. NO LAYOUT SHIFT
+   Skeletons mirror the real components' dimensions, so content arriving does
+   not push the page around. That is a perceived-performance win: the page feels
+   stable even while loading.
+
+9. NO IMAGE ASSETS FOR AVATARS
+   Initials avatars are drawn with CSS and text, so there are no image requests
+   and nothing to lazy-load or size-reserve.
+
+10. NO HEAVY UI DEPENDENCY
+    Dialogs, toasts, pagination, skeletons and variants are all small local
+    components instead of a component library. That keeps the bundle — and the
+    initial download — small.
+
+11. CSS-ONLY ANIMATION
+    All animations are CSS keyframes (GPU-friendly transform/opacity) with no
+    animation library.
+
+WHAT IS **NOT** DONE (do not claim these)
+-----------------------------------------
+- NO manual `React.memo` anywhere — the React Compiler handles memoization
+- NO request caching layer (React Query / SWR): every page mount re-fetches
+- NO request de-duplication
+- NO request cancellation (`AbortController`): a fast route change does not
+  cancel an in-flight request, so a late response can still set state (harmless
+  here, since state updates on unmounted components are ignored in React 18+,
+  but the request is still wasted)
+- NO virtualised lists
+- NO server-side pagination — all 50 doctors arrive in one response
+- NO prefetching of route chunks (no `import()` on hover)
+- NO image optimisation or lazy loading (there are no images)
+- NO service worker / offline support
+- NO bundle-size analysis or budget
+- NO performance measurement (no Lighthouse or profiler work is committed)
+- NO web fonts to optimise (the app uses system fonts)
+
+
+==================================================
+18. COMPLETE USER JOURNEY
+==================================================
+
+A single realistic walkthrough, tracing the code paths.
+
+STEP 1 — OPENING THE APP
+------------------------
+The user opens http://localhost:5173.
+
+    index.html        -> the inline script sets the theme class (no flash)
+            ↓
+    main.jsx          -> renders <App /> in StrictMode
+            ↓
+    App.jsx           -> ToastProvider + RouterProvider
+            ↓
+    router.jsx        -> matches "/" -> Layout -> HomePage (lazy chunk)
+            ↓
+    Layout            -> Navbar + main + Footer; useProfileSync runs
+            ↓
+    useProfileSync    -> userId is null (no session) -> clearProfile()
+            ↓
+    PageFallback skeleton -> HomePage chunk loads -> renders
+
+The Navbar shows: Home, Doctors, the theme toggle, Log in, Sign up. No profile
+dot, because nobody is logged in.
+
+STEP 2 — BROWSING DOCTORS
+-------------------------
+The user clicks "Find a Doctor" -> `/doctors`.
+
+    DoctorsPage mounts
+            ↓
+    useEffect -> getDoctors() -> GET /api/doctors -> 50 doctors
+            ↓
+    skeleton grid (6 cards, same grid as the real list)
+            ↓
+    doctors arrive  ->  the grid renders
+            ↓
+    "Showing 1-6 of 50 doctors"  +  Pagination (9 pages)
+
+STEP 3 — SEARCHING AND FILTERING
+--------------------------------
+The user types "sarah".
+
+    keystroke -> setSearch('sarah') -> the input shows "sarah" instantly
+              -> setPage(1)         -> back to page one
+              -> useDebounce waits 400 ms
+              -> debouncedSearch updates
+              -> filteredDoctors recomputes (name substring match)
+              -> "Showing 1-1 of 1 (filtered from 50) doctors"
+
+The user also picks "Cardiology" in the specialty dropdown -> the specialty
+list was built from the loaded doctors, so it is guaranteed to contain only
+specialties that exist.
+
+STEP 4 — OPENING A DOCTOR
+-------------------------
+The user clicks the doctor's name -> `/doctors/1`.
+
+    useParams() -> id = "1"
+            ↓
+    DoctorDetailsSkeleton
+            ↓
+    getDoctorById("1") -> GET /api/doctors/1
+            ↓
+    the full record renders: bio, specialty badge, rating, experience,
+    working days, phone, email, location, all time slots, the fee
+
+STEP 5 — FAVORITING A DOCTOR
+----------------------------
+The user clicks the heart on the details page.
+
+    toggleFavorite(1)
+            ↓
+    1 is pushed into favorites (a new array)
+            ↓
+    persisted to localStorage under "medicare-favorite-doctors"
+            ↓
+    the button becomes "Favorited" with a filled red heart (aria-pressed=true)
+            ↓
+    going back to /doctors, that card's heart is ALSO filled — same store,
+    no props passed between the two pages
+            ↓
+    clicking the "Favorites" toggle now shows only that doctor
+
+STEP 6 — TRYING TO BOOK WHILE LOGGED OUT
+----------------------------------------
+The user clicks "Book Appointment" -> `/book/1`.
+
+    ProtectedRoute runs first
+            ↓
+    isAuthenticated is false
+            ↓
+    <Navigate to="/login" replace state={{ from: location }} />
+            ↓
+    the login page renders; the URL is /login
+
+Note what did NOT happen: the BookAppointmentPage chunk was never downloaded,
+because the guard is outside the Suspense boundary and never rendered its
+children.
+
+STEP 7 — LOGGING IN
+-------------------
+The user enters demo@medicare.test / demo1234.
+
+    handleSubmit -> validation passes
+            ↓
+    login({ email, password })
+            ↓
+    normalizeEmail -> "demo@medicare.test"
+            ↓
+    GET /api/users?email=demo@medicare.test   -> an array with one account
+            ↓
+    account.password === password  -> OK
+            ↓
+    set({ user: { id: 1, name: 'Demo Patient', email: '...' } })
+            ↓
+    persist writes it to localStorage under "medicare-auth-user"
+            ↓
+    useProfileSync sees userId change from null to 1
+            ↓
+    GET /api/users/1  ->  { name: 'Demo Patient', email: '...', phone: '+1 (555) 010-1001' }
+            ↓
+    the profile store fills  ->  selectIsProfileComplete is TRUE for this
+    account (it has a phone), so no red dot appears
+            ↓
+    LoginPage navigates to `from` = "/book/1"
+
+STEP 8 — COMPLETING A PROFILE (for a NEW account)
+-------------------------------------------------
+If the user had just signed up instead, the record would have `phone: ""`, so:
+
+    selectIsProfileComplete -> false
+            ↓
+    the Navbar shows the red dot next to "Profile" (and profileLoading is
+    false by then, so it is not suppressed)
+            ↓
+    the Profile page shows the "Profile not set" empty state
+            ↓
+    "Add Profile" -> ProfileForm pre-filled with name and email (from the
+    account), phone empty
+            ↓
+    enter the phone -> Save
+            ↓
+    PATCH /api/users/:id  { name, email, phone }
+            ↓
+    the store updates from the response
+            ↓
+    toast("Profile saved.")
+            ↓
+    selectIsProfileComplete flips to true  ->  the Navbar dot disappears
+    immediately, with no refresh
+
+STEP 9 — BOOKING
+----------------
+The user is on `/book/1` (having been redirected back there after login).
+
+    useEffect -> getDoctors() -> the doctor dropdown
+            ↓
+    the form is pre-filled: patientName/email/phone from the profile,
+    doctorId=1 from the URL
+            ↓
+    the user picks a date (the picker blocks past dates, and validation
+    enforces it) and a time (the doctor's own slots: 09:00, 10:00, 11:00,
+    13:00, 14:00)
+            ↓
+    optional note (max 200 characters)
+            ↓
+    "Book appointment" -> submitting=true (spinner, button disabled)
+            ↓
+    POST /api/appointments
+      { patientName, email, phone, doctorId: 1, date, time, note,
+        status: 'scheduled' }
+            ↓
+    json-server assigns id: 1 and writes it into db.json
+            ↓
+    toast("Appointment booked successfully.")
+            ↓
+    navigate('/appointments')
+
+STEP 10 — VIEWING THE APPOINTMENT
+---------------------------------
+    AppointmentsPage mounts
+            ↓
+    Promise.all([GET /appointments, GET /doctors])
+            ↓
+    skeleton stack
+            ↓
+    the list renders, sorted newest first
+            ↓
+    the card shows: Dr. Sarah Mitchell's avatar, name and specialty (resolved
+    from doctorId via the lookup map), a "scheduled" badge, the patient name,
+    phone, the date formatted as "Sat, Sep 20, 2026", the time, and the note
+
+STEP 11 — RESCHEDULING
+----------------------
+The user clicks "Edit / Reschedule" -> `/appointments/1/edit`.
+
+    Promise.all([GET /appointments/1, GET /doctors])
+            ↓
+    the form loads pre-filled from the appointment
+            ↓
+    the user changes the date and time
+            ↓
+    "Save changes" -> PUT /api/appointments/1 with the new values and
+    status: 'scheduled' carried over
+            ↓
+    toast("Appointment updated successfully.") -> back to the list
+            ↓
+    the updated values are shown
+
+STEP 12 — CANCELLING
+--------------------
+The user clicks "Cancel appointment".
+
+    setCancelTarget(theAppointment)
+            ↓
+    the Dialog opens: "Cancel this appointment?" naming Dr. Sarah Mitchell,
+    the date and the time, and warning it cannot be undone
+            ↓
+    "Yes, cancel appointment" -> cancelling=true (spinner, disabled)
+            ↓
+    DELETE /api/appointments/1
+            ↓
+    the local list is filtered to drop that id
+            ↓
+    the dialog closes, toast("Appointment cancelled successfully.")
+            ↓
+    with no appointments left, the empty state appears:
+    "No appointments yet" + a Book button
+
+STEP 13 — LOGGING OUT
+---------------------
+    "Log out"
+            ↓
+    useAuthStore.logout()
+            ↓
+    clearProfile()          <- FIRST, so the cached profile is gone
+            ↓
+    user = null             <- the session ends; localStorage entry removed
+            ↓
+    the Navbar re-renders: "My Appointments", "Profile" and "Log out" vanish;
+    "Log in" and "Sign up" return
+            ↓
+    toast("You have been logged out.") -> navigate("/")
+            ↓
+    useProfileSync sees userId = null -> clearProfile() again (harmless,
+    already empty)
+
+The favorites remain, because they are stored per-browser and not per-account —
+which is a documented limitation, not a bug.
+
+
+==================================================
+19. IMPORTANT TECHNICAL QUESTIONS MY TEACHER MIGHT ASK
+==================================================
+
+32 questions with answers specific to THIS project.
+
+------------------------------------------------------------------
+Q1. WHY REACT?
+------------------------------------------------------------------
+Because the UI is highly stateful and changes constantly: a doctor list that
+filters as you type, hearts that fill when clicked, a Navbar that changes when
+you log in, skeletons that swap for content. React lets me describe what the UI
+should look like for a given state and re-renders the affected parts
+automatically, instead of me finding DOM nodes and updating them by hand. It is
+also component-based, which is what makes reusing DoctorCard, AppointmentForm
+and the ui/ primitives possible.
+
+------------------------------------------------------------------
+Q2. WHY VITE?
+------------------------------------------------------------------
+Three concrete reasons in this project:
+1. Speed — it serves source files as native ES modules, so the dev server starts
+   instantly and hot module replacement updates the browser without a reload.
+2. The dev PROXY. `vite.config.js` forwards `/api/*` to json-server on port
+   3001. That is how this app talks to the API without any CORS configuration.
+3. It handles JSX, Tailwind, the React Compiler plugin and `import.meta.env`
+   variables out of the box through plugins.
+
+It is also the production bundler: `npm run build` emits `dist/`.
+
+------------------------------------------------------------------
+Q3. WHY REACT ROUTER, AND NOT JUST SHOWING AND HIDING COMPONENTS?
+------------------------------------------------------------------
+Because the app needs real URLs. Requirements the router satisfies:
+- Ten distinct screens, each with its own address, so the browser Back button,
+  refresh and bookmarking all work normally.
+- DYNAMIC routes: `/doctors/:id` and `/appointments/:id/edit` — the same
+  component for infinite ids, read with `useParams()`.
+- A SHARED LAYOUT: one parent route renders Layout (Navbar + main + Footer), and
+  every page is a child rendered into `<Outlet />`, so the shell is written once.
+- ROUTE GUARDS: ProtectedRoute wraps specific routes in the route table.
+- LAZY LOADING: each route can be its own chunk.
+- A catch-all `path: '*'` for 404s.
+
+Doing all of that with conditional rendering would mean reimplementing the
+history API, and I would lose deep links and the Back button.
+
+------------------------------------------------------------------
+Q4. WHY ZUSTAND INSTEAD OF CONTEXT OR REDUX?
+------------------------------------------------------------------
+Because four pieces of state are needed by components that are far apart — the
+session (Navbar, route guard, pages), the profile (Navbar dot, Profile page,
+booking form), favorites (every card and the details page) and the theme
+(Navbar and <html>).
+
+Context would work, but:
+- Zustand's `persist` middleware gives localStorage persistence for three of the
+  four stores in about three lines. With Context I would write the
+  read/parse/write/sync myself.
+- Context re-renders all consumers when the value changes. Zustand's selectors
+  subscribe to a SLICE, so toggling a favorite does not re-render a component
+  that only reads the theme.
+
+Redux is heavier than needed (actions, reducers, a provider) for four small
+stores. Zustand also lets non-component code read state directly —
+`useProfileStore.getState().clearProfile()` inside `logout()` — which Context
+cannot do without a ref.
+
+------------------------------------------------------------------
+Q5. WHY AXIOS INSTEAD OF FETCH?
+------------------------------------------------------------------
+Mainly configuration and error handling:
+- One instance holds the base URL and JSON headers, so the API location is
+  defined in exactly one place. With fetch I would repeat the URL in every call.
+- Query params are declarative: `api.get('/users', { params: { email } })`
+  instead of building a query string by hand.
+- The response body is already parsed JSON.
+- Most importantly for this app: on a non-2xx status, Axios REJECTS the promise
+  with an error that carries `error.response.status`. DoctorDetailsPage uses
+  that to distinguish a 404 (`err.response?.status === 404` -> "Doctor not
+  found") from a network failure ("the server is not running"). With fetch, a
+  404 is a RESOLVED promise and I would have to check `response.ok` manually in
+  every single call site.
+
+------------------------------------------------------------------
+Q6. WHY JSON-SERVER? IS IT A REAL BACKEND?
+------------------------------------------------------------------
+No — it is a development mock, and I should say so clearly. It reads `db.json`
+and exposes each top-level key as a REST endpoint with GET/POST/PUT/PATCH/DELETE
+and query-parameter filtering.
+
+I used it because the point of the project is the React front end, but I did not
+want to fake the data layer with local arrays. json-server gives me real HTTP:
+real requests, real status codes (including 404s I can handle), real
+persistence to a file. The frontend code is written exactly as it would be
+against a real API — only `VITE_API_URL` would change.
+
+Its limits: no authentication, no authorization, no validation, no concurrency
+control, no relations, and it stores passwords in plain text.
+
+------------------------------------------------------------------
+Q7. WHY USE ROUTE-LEVEL LAZY LOADING?
+------------------------------------------------------------------
+So the initial download contains only what is needed to show the first screen.
+All ten pages are `React.lazy()` imports, so each becomes its own chunk. Someone
+who only browses the doctor list never downloads the appointment form, the edit
+page or the profile page.
+
+`Layout` is deliberately NOT lazy, because it is needed on every single route —
+splitting it would only add a round trip.
+
+There is a second, less obvious benefit: the route guard sits OUTSIDE the
+Suspense boundary, so for a logged-out visitor the protected page's `import()`
+is never invoked and the chunk is never downloaded at all.
+
+------------------------------------------------------------------
+Q8. WHAT IS SUSPENSE AND WHAT DOES IT DO HERE?
+------------------------------------------------------------------
+Suspense is React's boundary for "this component is not ready to render yet".
+A lazy component suspends on its first render while the chunk downloads;
+Suspense catches that and renders its `fallback` instead of crashing.
+
+In this project every lazy route is wrapped by the `delay()` helper:
+
+    function delay(page) {
+      return <Suspense fallback={<PageFallback />}>{page}</Suspense>
+    }
+
+`PageFallback` is a skeleton (a title bar and a six-card grid), so a chunk
+download shows a layout-shaped placeholder rather than a blank screen or a
+spinner. Suspense is used ONLY for code splitting here — not for data fetching.
+
+------------------------------------------------------------------
+Q9. WHAT IS THE DIFFERENCE BETWEEN STATE AND PROPS?
+------------------------------------------------------------------
+PROPS are data passed INTO a component from its parent. They are read-only
+inside the component — a component must never modify its props.
+
+STATE is data a component owns and can change. Changing it triggers a re-render.
+
+Concrete examples from this project:
+- PROPS: `<DoctorCard doctor={doctor} />` — DoctorCard receives one doctor and
+  renders it. It cannot change that doctor.
+- PROPS: `<AppointmentForm doctors={doctors} defaultValues={...}
+  onSubmit={onSubmit} submitting={submitting} submitLabel="Book appointment" />`
+  — the form is configured entirely through props, which is exactly why the same
+  component works for both booking and editing.
+- STATE: `const [search, setSearch] = useState('')` in DoctorsPage — the search
+  text is owned by that page and changes as the user types.
+- STATE: `const [cancelTarget, setCancelTarget] = useState(null)` in
+  AppointmentsPage — which appointment is pending cancellation.
+- GLOBAL STATE (Zustand): `useAuthStore.user` — not passed as props at all,
+  because it is needed by components far apart in the tree. Passing it down
+  would mean Layout and Outlet carrying data they do not use ("prop drilling").
+
+The practical rule I used: if only one component cares, it is local state; if a
+parent needs to configure a child, it is a prop; if unrelated components need to
+share it, it goes in a store.
+
+------------------------------------------------------------------
+Q10. HOW DOES AUTHENTICATION WORK IN THIS PROJECT, END TO END?
+------------------------------------------------------------------
+Accounts are records in the `users` collection of db.json, read and written
+through the same json-server API as everything else.
+
+SIGNUP: `GET /users?email=...` to check the email is free, then
+`POST /users` with name/email/password/phone. The store immediately sets the
+session, so the user is logged in without a second step.
+
+LOGIN: `GET /users?email=...`, then compare the returned record's password. On
+match, `set({ user: { id, name, email } })` — the password is stripped by
+`toSessionUser` and never enters the session.
+
+SESSION: the auth store is wrapped in `persist` with
+`partialize: (state) => ({ user: state.user })`, so only the identity goes to
+localStorage under "medicare-auth-user".
+
+IDENTIFICATION: `selectIsAuthenticated` (`Boolean(state.user)`) is the single
+source of truth, shared by ProtectedRoute and the Navbar.
+
+PROFILE: `useProfileSync` watches `state.user?.id` and loads that user's profile
+from `GET /users/:id`.
+
+LOGOUT: `clearProfile()` then `set({ user: null })`.
+
+I want to be explicit that this is DEMO authentication: it is decided entirely in
+the browser, with no token and no server-side check, and passwords are plain
+text. It demonstrates the flow, not real security.
+
+------------------------------------------------------------------
+Q11. WHERE ARE PASSWORDS STORED, AND WHAT ARE THE IMPLICATIONS?
+------------------------------------------------------------------
+They are stored as PLAIN TEXT in the `password` field of each user record in
+db.json. `GET /users` returns them, so anyone who can reach the API can read
+every password.
+
+Three implications I should state openly:
+1. No hashing — a leaked db.json leaks every credential.
+2. The API has no authorization, so an unauthenticated request returns all
+   users including their passwords.
+3. The comparison `account.password !== password` is a plain string comparison.
+
+I mitigate what I can on the CLIENT: `toSessionUser()` strips the password so it
+never enters the session state or localStorage, and `updateUser` uses PATCH so a
+profile save cannot wipe or expose the field. But those are client-side
+precautions — the real fix is server-side hashing (bcrypt/argon2) and never
+returning the field at all.
+
+------------------------------------------------------------------
+Q12. HOW ARE PROTECTED ROUTES IMPLEMENTED?
+------------------------------------------------------------------
+With a wrapper component applied in the route table:
+
+    // router.jsx
+    function protect(page) {
+      return <ProtectedRoute>{delay(page)}</ProtectedRoute>
+    }
+
+    { path: 'appointments', element: protect(<AppointmentsPage />) }
+
+    // ProtectedRoute.jsx
+    export function ProtectedRoute({ children }) {
+      const location = useLocation()
+      const isAuthenticated = useAuthStore(selectIsAuthenticated)
+      if (!isAuthenticated) {
+        return <Navigate to="/login" replace state={{ from: location }} />
+      }
+      return children
+    }
+
+Three things it does: redirects when there is no session, passes the blocked
+location through router state so login can return the user there, and uses
+`replace` so the Back button cannot bounce the user in a redirect loop.
+
+It is a component rather than a hook so it can be used as an element in the route
+table, and so it can decide not to RENDER the child at all — which is also why
+the protected chunk is not downloaded for a logged-out user.
+
+------------------------------------------------------------------
+Q13. WHY DOESN'T ProtectedRoute NEED A LOADING STATE?
+------------------------------------------------------------------
+Because Zustand's persist middleware rehydrates from localStorage
+SYNCHRONOUSLY. localStorage reads are synchronous, so by the time the store is
+first read during render, `user` is already known.
+
+If rehydration were asynchronous — for example if the session came from an API
+call — then on every refresh there would be a moment where we do not yet know
+whether the user is logged in. ProtectedRoute would have to render a loading
+state during that window, otherwise it would redirect a genuinely logged-in user
+to /login, they would log in again, and it would be an obvious bug.
+
+The synchronous read eliminates that entire class of problem. App.jsx has no
+async session bootstrap for the same reason — there is nothing to await.
+
+------------------------------------------------------------------
+Q14. HOW IS PROFILE DATA ASSOCIATED WITH A SPECIFIC USER?
+------------------------------------------------------------------
+The profile fields are COLUMNS ON THE USER'S OWN RECORD. There is no separate
+profiles collection and no mapping table. The association IS the record:
+
+    users: [ { id: 3, name: "Yousef Ali", email: "...", password: "...",
+               phone: "..." } ]
+
+    authenticated user -> user.id = 3 -> GET /users/3 -> that user's profile
+
+This is why different users have different profiles with no extra work: the id
+comes from the session, and the fetch is scoped to it by the URL.
+
+I considered a separate profiles collection and localStorage, and rejected both:
+a separate collection adds a second request and a join for three fields, and
+localStorage is per-BROWSER, not per-account, so two accounts on one computer
+would collide and the data would not follow the user to another device.
+
+------------------------------------------------------------------
+Q15. WHY IS THE PROFILE STORE NOT PERSISTED WHILE THE AUTH STORE IS?
+------------------------------------------------------------------
+Deliberate asymmetry:
+
+AUTH is persisted because the session must SURVIVE A REFRESH. Without it, every
+refresh would log the user out. It is also tiny ({ id, name, email }) and
+contains no password.
+
+PROFILE is NOT persisted because:
+1. The data already lives on the server, so persisting it would create a second,
+   possibly stale, copy.
+2. Privacy — with nothing in localStorage there is nothing to leak into another
+   user's session on the same browser.
+3. It has to be re-fetched anyway to be sure the cached copy is the CURRENT
+   user's.
+
+The profile store is a CACHE, not a source of truth. Its job is to hold the data
+in memory so the Navbar, the Profile page and the booking form can read it
+without each making its own request.
+
+------------------------------------------------------------------
+Q16. HOW DOES THE PROFILE GET LOADED AFTER A PAGE REFRESH?
+------------------------------------------------------------------
+Two mechanisms working together:
+
+1. The AUTH store rehydrates synchronously from localStorage, so `user` (and
+   therefore `user.id`) is available on the very first render.
+
+2. `useProfileSync()` in Layout watches that id:
+
+       const userId = useAuthStore((state) => state.user?.id ?? null)
+       useEffect(() => {
+         if (userId == null) { clearProfile(); return }
+         loadProfile(userId)
+       }, [userId, loadProfile, clearProfile])
+
+   On the first render after a refresh, `userId` has a value, so the effect runs
+   and issues `GET /users/:id`. The profile arrives a moment later, and the
+   Navbar dot, the Profile page and the booking pre-fill all update.
+
+`?? null` normalises `undefined` (no user) to `null`, so the comparison is always
+against one value.
+
+The same effect handles login, user switching and logout, because all four cases
+are the same event: the authenticated user changed.
+
+------------------------------------------------------------------
+Q17. WHAT HAPPENS ON LOGOUT, AND WHY DOES THE ORDER MATTER?
+------------------------------------------------------------------
+    logout: () => {
+      useProfileStore.getState().clearProfile()
+      set({ user: null })
+    }
+
+`clearProfile()` comes FIRST, and that matters. The profile store is an
+in-memory cache that is not persisted. If the user id were cleared first and the
+profile second, there would be a window in which the app is logged out while the
+previous user's name, email and phone are still in the store — visible in the
+Navbar and the booking form. On a shared computer, the next person to log in
+could see the previous user's details until their own profile finished loading.
+
+Clearing the profile first closes that window.
+
+`set({ user: null })` ends the session, and the persist middleware removes the
+localStorage entry.
+
+Note also that `clearProfile()` resets `loading` and `error` as well as the
+fields, so the store is in a clean initial state, not a half-populated one.
+`useProfileSync` will then also fire with `userId === null` and call
+`clearProfile()` again — harmless, and it means both paths (explicit logout and
+losing the session some other way) converge on the same state.
+
+------------------------------------------------------------------
+Q18. HOW DOES PAGINATION WORK? IS IT SERVER-SIDE?
+------------------------------------------------------------------
+CLIENT-SIDE. json-server can paginate, but I fetch all 50 doctors once
+(`GET /doctors`) and slice them in the browser.
+
+    const DOCTORS_PER_PAGE = 6
+    const totalPages = Math.max(1, Math.ceil(filteredDoctors.length / 6))
+    const safePage = Math.min(page, totalPages)
+    const pagedDoctors = filteredDoctors.slice((safePage-1)*6, safePage*6)
+
+Why client-side: it makes search, the specialty filter and the favorites filter
+compose trivially. All three narrow `filteredDoctors` in one memoized pass, and
+pagination just takes a slice of the result. Server-side pagination would mean
+sending the search term and specialty to the API and re-fetching on every
+keystroke — more complexity for a 50-row dataset.
+
+6 per page is chosen deliberately: the grid is at most 3 columns, so 6 fills
+exactly two complete rows.
+
+The details that make it robust:
+- `Math.max(1, ...)` guarantees at least one page, so an empty result does not
+  produce "Page 1 of 0".
+- `safePage` CLAMPS the current page, so a filter that shrinks the results can
+  never leave the user on a page that no longer exists.
+- Every filter change also calls `setPage(1)` explicitly, so the clamp is a
+  safety net rather than the normal path.
+- The Pagination component returns `null` when `totalPages <= 1`.
+
+Efficiency: only 6 cards are ever rendered, so the DOM stays small no matter how
+many doctors the API returns.
+
+------------------------------------------------------------------
+Q19. HOW DOES DEBOUNCING WORK, AND WHY IS IT ONLY USED FOR SEARCH?
+------------------------------------------------------------------
+    export function useDebounce(value, delay = 400) {
+      const [debouncedValue, setDebouncedValue] = useState(value)
+      useEffect(() => {
+        const timer = setTimeout(() => setDebouncedValue(value), delay)
+        return () => clearTimeout(timer)
+      }, [value, delay])
+      return debouncedValue
+    }
+
+Every time `value` changes the effect re-runs. The CLEANUP function from the
+previous run fires first and clears the pending timer, then a new timer is
+started. So only one timer is ever pending, and it only completes if 400 ms pass
+without another keystroke. The returned value therefore lags behind by design.
+
+In DoctorsPage the input is driven by `search` (so typing is instant) while the
+filter reads `debouncedSearch` (so the list re-filters once, after the user
+pauses). Without it, typing "cardiology" would run the filter ten times over 50
+doctors.
+
+Why not elsewhere: debouncing exists to absorb RAPID, CONTINUOUS input. Search
+typing is the only such input in this app. Everything else is a discrete action
+— a click, a form submit, a page change — and delaying those would just make the
+app feel unresponsive. (The specialty dropdown is a select, not free text, so a
+single change per interaction; the pagination buttons are clicks.)
+
+------------------------------------------------------------------
+Q20. HOW ARE FAVORITES PERSISTED? ARE THEY PER-USER?
+------------------------------------------------------------------
+PERSISTED: yes, to localStorage under "medicare-favorite-doctors", via Zustand's
+persist middleware. They survive a refresh and a browser restart.
+
+PER-USER: no — and this is an honest limitation. Favorites live in the BROWSER,
+not on an account, because there is no server-side favorites storage at all.
+Consequences:
+- Two users on the same browser share one favorites list.
+- They do not follow a user to another device.
+- Clearing browser storage loses them.
+- They work while logged out, which is intentional — you can favorite before
+  creating an account.
+
+FIXING IT would mean storing favorites server-side: either a `favorites`
+collection with `{ userId, doctorId }` records, or a `favoriteDoctorIds` array on
+the user record, written through the API. That would make them per-account, and
+it would be a small change to this store — the store already centralises the
+read and the toggle.
+
+The store deliberately keeps only IDs:
+
+    favorites: [1, 7, 12]
+
+Two reasons: the localStorage payload stays tiny, and a stored id can never go
+stale — if a doctor's fee changes on the server, the favorites list still just
+says "7", and the current data always comes from the API.
+
+------------------------------------------------------------------
+Q21. HOW DOES AN API REQUEST FLOW THROUGH THE APPLICATION?
+------------------------------------------------------------------
+Example: opening the doctor details page.
+
+    DoctorDetailsPage mounts
+            ↓
+    useEffect -> getDoctorById(id)
+            ↓
+    src/services/api.js -> api.get(`/doctors/${id}`)
+            ↓
+    Axios prepends baseURL ("/api") -> the request is
+    GET /api/doctors/3  on the app's OWN origin (localhost:5173)
+            ↓
+    the Vite dev server matches the "/api" prefix and proxies:
+        target: 'http://localhost:3001'
+        rewrite: path => path.replace(/^\/api/, '')
+            ↓
+    json-server receives GET /doctors/3 on port 3001
+            ↓
+    it reads db.json and responds 200 with the doctor JSON
+            ↓
+    Axios resolves; .then(unwrap) extracts response.data
+            ↓
+    .then(setDoctor) stores it in component state
+            ↓
+    React re-renders; the skeleton is replaced by the real content
+
+The important structural point: the COMPONENT never knows the API's address,
+never touches Axios, and never parses JSON. It calls a named function that
+describes what it wants, and receives plain data.
+
+------------------------------------------------------------------
+Q22. WHAT HAPPENS WHEN AN API REQUEST FAILS?
+------------------------------------------------------------------
+Three different handling patterns, chosen by what the failure means for the user.
+
+1. PAGE LOAD FAILURE -> an inline error state with retry.
+   Every page has `const [error, setError] = useState(null)`, and its load
+   function does `.catch(() => setError(...))`. The render shows
+   `<ErrorAlert title=... message=... onRetry={load} />`. `onRetry` re-runs the
+   same request the page loaded with (on most pages it is the identical
+   function reference), so retrying follows the same path as the first load.
+
+   The messages are actionable: "Please check that the API server is running,
+   then try again." That is also how a developer diagnoses a missing
+   `npm run api`.
+
+2. 404 vs NETWORK -> distinguished.
+   DoctorDetailsPage does:
+
+       .catch((err) => setError(err.response?.status === 404 ? 'not-found' : 'network'))
+
+   A 404 means the record does not exist — permanent, so it shows "Doctor not
+   found" with a link back to the list and NO retry button (retrying a
+   non-existent id is pointless). Anything else means the request failed —
+   temporary, so it shows a retry.
+
+   `err.response?.status` uses optional chaining because a NETWORK failure has no
+   `response` at all — accessing `.status` unguarded would throw inside the catch
+   handler.
+
+3. MUTATION FAILURE -> a toast, and the UI does not change.
+   Booking, updating, cancelling and saving a profile all use
+   `.catch(() => toast('...Please try again.', 'error'))`. The local state is
+   left untouched, so the UI never shows a change the server did not accept.
+   On the edit page, the `submitting` flag is reset in the catch so the user can
+   retry; on the create page the same. On the cancel dialog, the dialog stays
+   OPEN on failure so the user can try again.
+
+What is NOT done: no automatic retry with backoff, no global interceptor, no
+React error boundary, and no offline detection.
+
+------------------------------------------------------------------
+Q23. WHY SPLIT components/ui FROM components/<feature>?
+------------------------------------------------------------------
+Because they have different jobs and different reusability.
+
+`components/ui` — generic building blocks that know NOTHING about this domain:
+button, card, input, select, label, textarea, badge, alert, dialog, pagination,
+skeleton, toast. `Button` does not know what an appointment is. These could be
+lifted into any project unchanged.
+
+`components/doctors` and `components/appointments` — domain components. DoctorCard
+knows what a doctor looks like; AppointmentForm knows which fields an appointment
+has. They compose the ui primitives.
+
+The benefit is that a change stays contained. Restyling every button is one edit
+in `ui/button.jsx`; a change to how a doctor is displayed touches only
+`doctors/`.
+
+WHY REUSABLE COMPONENTS AT ALL — concrete evidence from this project:
+- `AppointmentForm` is used by TWO pages (booking and editing), configured by
+  props. One form, one set of validation rules, one place to fix a bug.
+- `ErrorAlert` is used on five pages.
+- `Skeleton` is used by all five skeleton components.
+- `DoctorAvatar` is used by the doctor card, the details page and the
+  appointment card.
+- `Pagination` is generic (page / totalPages / onPageChange), so it would work
+  for any list.
+
+Without reuse, validation rules like the phone pattern would be duplicated and
+would drift.
+
+------------------------------------------------------------------
+Q24. WHY IS THE APPOINTMENT FORM REUSED FOR BOTH BOOKING AND EDITING?
+------------------------------------------------------------------
+Because the FIELDS ARE IDENTICAL — patient name, email, phone, doctor, date,
+time, note. Only three things differ, and all three are props:
+
+    BOOK   defaultValues from the PROFILE, doctorId from the URL
+           submitLabel="Book appointment", submittingLabel="Booking..."
+           onSubmit -> POST /appointments, then navigate to the list
+
+    EDIT   defaultValues from the LOADED APPOINTMENT
+           submitLabel="Save changes" (submittingLabel keeps its default)
+           onSubmit -> PUT /appointments/:id, then navigate to the list
+
+The form itself does not fetch, does not POST, and does not navigate. It
+receives `doctors` (for the dropdown), `defaultValues`, `onSubmit`, `submitting`
+and the labels — and reports the validated values back. The page owns the
+side effects.
+
+Benefits: the validation rules exist ONCE (so the phone pattern cannot drift
+between booking and editing), the layout is consistent, and a fix applies to
+both screens. This is the practical meaning of "lifting state up" and
+"presentational vs container components".
+
+The one piece of edit-specific logic inside the form is the slot handling: if
+the saved time is not among the selected doctor's slots, it is ADDED so the
+current value stays selectable.
+
+------------------------------------------------------------------
+Q25. WHAT HAPPENS DURING A PAGE REFRESH?
+------------------------------------------------------------------
+Everything in memory is lost; everything that was persisted is restored. Step by
+step:
+
+1. THEME — restored TWICE: the inline script in index.html reads
+   "medicare-theme" from localStorage and sets the `dark` class before the first
+   paint, and `applyThemeClass` runs again at store import time. No flash.
+
+2. SESSION — "medicare-auth-user" is rehydrated SYNCHRONOUSLY by the persist
+   middleware, so the app knows who is logged in before the first render. No
+   redirect flash for a logged-in user.
+
+3. FAVORITES — "medicare-favorite-doctors" rehydrates, so hearts are already
+   filled on first paint.
+
+4. PROFILE — NOT persisted, so it starts empty and is re-fetched:
+   `useProfileSync` sees the restored user id and calls `GET /users/:id`. Until
+   it resolves, `loading` is true, which is why the Navbar dot is suppressed and
+   the Profile page shows a skeleton rather than briefly claiming the profile is
+   missing.
+
+5. PAGE DATA — not persisted either, so the page re-fetches: the doctor list, the
+   appointments, or the single record. Skeletons show while in flight.
+
+6. LOCAL UI STATE — search text, filters, page number, which dialog is open,
+   `editing` on the profile page: all reset, because they are plain `useState`.
+   After a refresh you are back to an unfiltered page 1.
+
+So: theme, session and favorites survive; profile, page data and UI state are
+reloaded or reset.
+
+------------------------------------------------------------------
+Q26. HOW DOES THE DOCTOR LIST AVOID RE-RENDERING TOO MUCH?
+------------------------------------------------------------------
+Several things together:
+
+1. `useMemo` on the expensive derivations — `filteredDoctors` (a three-condition
+   pass over 50 doctors), `pagedDoctors` (the slice) and `specialties` (a Set,
+   map and sort). Each has correct dependencies, so they only recompute when
+   their inputs change. Without memoization, `filteredDoctors` would re-run on
+   EVERY render, including renders caused by something unrelated like a toast
+   appearing.
+
+2. SLICE SELECTORS on the store. Components subscribe to exactly what they need:
+
+       const favorites = useFavoritesStore((state) => state.favorites)
+       const isFavorite = useFavoritesStore((state) => state.favorites.includes(doctor.id))
+
+   Toggling one favorite changes the array, so the cards re-render — but a
+   component reading only the theme does not.
+
+3. CLIENT-SIDE PAGINATION means the grid renders at most 6 cards, so the number
+   of components that could re-render is capped.
+
+4. THE REACT COMPILER memoizes components automatically at build time, which is
+   why there is no manual `React.memo` in the codebase.
+
+5. DEBOUNCING means the filter runs once after typing stops, instead of on every
+   keystroke.
+
+I should be careful in claiming: there is NO manual `React.memo`, NO
+virtualisation and NO server-side pagination here.
+
+------------------------------------------------------------------
+Q27. WHY STORE ONLY DOCTOR IDS IN FAVORITES, NOT THE WHOLE OBJECTS?
+------------------------------------------------------------------
+Size and freshness.
+
+SIZE: 50 full doctor records (description, slots array, contact details) in
+localStorage versus an array of numbers.
+
+FRESHNESS: a stored doctor object becomes STALE the moment the data changes on
+the server — a stale fee or rating would be shown to the user. Storing only the
+id makes the favorites list purely a SELECTION; the actual doctor data always
+comes fresh from the API. This is the same principle as not persisting the
+profile.
+
+The lookup is cheap: the doctors page already has the full list in memory, so
+filtering it by `favorites.includes(doctor.id)` is a simple pass.
+
+------------------------------------------------------------------
+Q28. WHY PATCH FOR THE PROFILE BUT PUT FOR THE APPOINTMENT?
+------------------------------------------------------------------
+Because they send different amounts of data, and the semantics differ.
+
+APPOINTMENT (PUT): the edit form submits every field of the appointment, so a
+full replacement is exactly right. The one field the form does not contain —
+`status` — is copied from the loaded appointment into the payload
+(`status: appointment.status`), because PUT replaces the record and would
+otherwise drop it.
+
+PROFILE (PATCH): the profile form submits only name, email and phone. The user
+record ALSO contains the password, which is not in the payload. A PUT would
+replace the whole record and DELETE the password. PATCH merges the supplied
+fields and leaves the rest untouched — which is both correct and safer.
+
+The general rule: PUT when you are sending the complete resource, PATCH when you
+are sending a subset.
+
+------------------------------------------------------------------
+Q29. HOW DOES DARK MODE WORK WITHOUT A FLASH OF LIGHT?
+------------------------------------------------------------------
+Two mechanisms, both running BEFORE the first paint:
+
+1. `index.html` contains a small inline script in <head>:
+
+       var saved = JSON.parse(localStorage.getItem('medicare-theme') || '{}').state
+       var theme = saved && saved.theme
+       if (theme === 'dark' ||
+           (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+         document.documentElement.classList.add('dark')
+       }
+
+   It is INLINE (not a separate file) so it runs immediately, without waiting
+   for another network request, and it is in the head so it runs before <body>
+   is painted. It also mirrors the store's logic: an explicit saved choice wins,
+   otherwise the OS preference.
+
+2. `applyThemeClass(useThemeStore.getState().theme)` runs at the BOTTOM of
+   useThemeStore.js, i.e. when the module is imported, which is before React
+   renders.
+
+Together, the `dark` class is on <html> before anything is drawn.
+
+WHY IT MATTERS: if the theme were applied only after React mounted, the browser
+would paint the light theme first and then repaint dark — a visible white flash
+on every page load. The inline script is the standard fix.
+
+The script is wrapped in try/catch, so corrupted localStorage (invalid JSON)
+falls back to light instead of throwing and breaking the page.
+
+The styling side: all colors are CSS VARIABLES, and the `.dark` class redefines
+them. Components use semantic classes (`bg-card`, `text-muted-foreground`), so
+they need no knowledge of the active theme — the variables do the work.
+
+------------------------------------------------------------------
+Q30. WHAT IS THE ROLE OF THE LAYOUT COMPONENT?
+------------------------------------------------------------------
+It is the shared page shell, used as the element of the single PARENT route:
+
+    <div className="flex min-h-svh flex-col">
+      <Navbar />
+      <main key={pathname} className="... animate-fade-in"><Outlet /></main>
+      <Footer />
+    </div>
+
+`<Outlet />` is where the matched child route renders. Because of this nesting,
+the Navbar and Footer are written once and appear on every page, and they are NOT
+re-mounted when you navigate — only the content inside <main> changes.
+
+`key={pathname}` makes <main> a NEW element on each route change, so the CSS
+fade-in replays. That is a page transition with no animation library — the
+remount is the trigger.
+
+Layout also calls `useProfileSync()`. That location is deliberate: the hook must
+run on EVERY route, because the Navbar needs the profile-completion state on
+public pages too (the red dot has to be correct on the home page, not only on
+/profile).
+
+It is NOT lazy-loaded, because every route needs it immediately.
+
+------------------------------------------------------------------
+Q31. WHY IS THERE A LAYOUT-LEVEL "DELAY CAPPED AT 8" IN THE LIST ANIMATIONS?
+------------------------------------------------------------------
+    style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+
+Each list item gets a staggered entrance delay, 60 ms apart, so the grid appears
+as a cascade rather than all at once. But the delay is CAPPED at the 8th item:
+without the `Math.min`, the 50th doctor would wait 50 × 60 ms = 3 seconds before
+appearing. Capping means the first nine items cascade and everything after them
+animates together — the effect reads as a flourish rather than a slow load.
+
+------------------------------------------------------------------
+Q32. WHY IS THERE NO REACT ERROR BOUNDARY, AND WHAT WOULD HAPPEN WITHOUT ONE?
+------------------------------------------------------------------
+CORRECT — there is no error boundary in this project, and I should say so rather
+than claim otherwise.
+
+An error boundary is a component that catches errors thrown during rendering of
+its children and shows a fallback UI instead of unmounting the whole tree.
+
+WITHOUT one, if a component throws during render — for example if some code
+assumed `doctor.workingDays` exists and it does not — React unmounts the entire
+tree and the user sees a blank white page with the error only in the console.
+Nothing in the UI explains what happened.
+
+The app IS defensive in the places it matters most: API failures are handled per
+page, `err.response?.status` uses optional chaining so a network error cannot
+throw inside a catch handler, `getInitials` returns '' rather than throwing on
+empty input, `AppointmentCard` handles a missing doctor with an "N/A" fallback,
+and `DoctorDetailsPage` handles a 404 explicitly.
+
+But those are local guards. A render-time error anywhere would still take the
+whole app down. Adding an error boundary around the routed content is one of the
+first things I would add — it is a small component and it converts a blank page
+into a recoverable message.
+
+
+==================================================
+20. IMPORTANT CODE CONCEPTS I SHOULD UNDERSTAND
+==================================================
+
+Files, functions and patterns to be able to explain before presenting. For each:
+what it does, why it exists, where it is used.
+
+------------------------------------------------------------------
+A. ENTRY POINT — src/main.jsx
+------------------------------------------------------------------
+WHAT  Mounts the React tree:
+      createRoot(document.getElementById('root')).render(
+        <StrictMode><App /></StrictMode>
+      )
+WHY   It is the single place where React attaches to the DOM. `<StrictMode>` is a
+      development-only wrapper that double-invokes renders and effects to surface
+      bugs (which is why you may see duplicate requests in dev).
+WHERE The app's first executed module, referenced from index.html.
+
+------------------------------------------------------------------
+B. APP ROOT — src/App.jsx
+------------------------------------------------------------------
+WHAT  Wraps the router in `<ToastProvider>`.
+WHY   It is deliberately minimal. There is NO async session bootstrap, because
+      the auth store rehydrates from localStorage synchronously — there is
+      nothing to wait for. That is a documented design decision, not an
+      oversight.
+WHERE Rendered by main.jsx.
+
+------------------------------------------------------------------
+C. ROUTE TABLE — src/routes/router.jsx
+------------------------------------------------------------------
+WHAT  The entire routing configuration in one file.
+WHY   A single source of truth for URLs, lazy imports, Suspense and guards.
+WHERE Used by App.jsx via `<RouterProvider>`.
+
+      KEY PIECES:
+      - `lazy(() => import('../pages/X'))` for all ten pages -> code splitting
+      - `delay(page)` wraps a page in `<Suspense fallback={<PageFallback/>}>`
+      - `protect(page)` wraps it in `<ProtectedRoute>` AND the Suspense boundary
+        — note the ORDER: the guard is outside, so a logged-out user's protected
+        chunk is never downloaded
+      - `PageFallback` — the skeleton shown while a page chunk downloads
+      - one parent route (`path: '/'`, element `<Layout />`) with all pages as
+        children, plus `path: '*'` for 404
+
+------------------------------------------------------------------
+D. ROUTE GUARD — src/components/auth/ProtectedRoute.jsx
+------------------------------------------------------------------
+WHAT  Reads `selectIsAuthenticated`; renders children or redirects to /login.
+WHY   To restrict booking, appointments and profile to logged-in users.
+WHERE Applied via `protect()` in router.jsx.
+
+      THREE DETAILS:
+      - `state={{ from: location }}` so login can return the user to the page
+        they wanted
+      - `replace` so the Back button cannot create a redirect loop
+      - It does NOT render children when unauthenticated, so the lazy chunk is
+        never fetched
+
+------------------------------------------------------------------
+E. PAGE SHELL — src/components/layout/Layout.jsx
+------------------------------------------------------------------
+WHAT  Navbar + `<main key={pathname}>` with `<Outlet />` + Footer.
+WHY   Written once for all routes; `key={pathname}` remounts <main> so the CSS
+      fade-in replays as a page transition.
+WHERE The element of the parent route.
+
+------------------------------------------------------------------
+F. PROFILE SYNC HOOK — src/hooks/useProfileSync.js
+------------------------------------------------------------------
+WHAT  One effect: if there is a user id, `loadProfile(id)`; if not,
+      `clearProfile()`.
+WHY   Login, refresh, user switch and logout are all "the authenticated user
+      changed" — so one effect covers all four.
+WHERE Called from Layout, so it runs on every route (the Navbar needs the
+      completion state everywhere).
+
+------------------------------------------------------------------
+G. DEBOUNCE HOOK — src/hooks/useDebounce.js
+------------------------------------------------------------------
+WHAT  Returns a copy of a value that updates only after `delay` ms of no change.
+WHY   So the 50-doctor filter runs once after typing stops, not per keystroke,
+      while the input itself stays instant.
+WHERE DoctorsPage: `const debouncedSearch = useDebounce(search, 400)`.
+
+      THE MECHANISM IS THE CLEANUP FUNCTION:
+      `return () => clearTimeout(timer)` cancels the previous timer before the
+      next effect starts, so only one timer is ever pending.
+
+------------------------------------------------------------------
+H. THE FOUR STORES — src/stores/
+------------------------------------------------------------------
+WHAT  Global state.
+WHY   Data needed by components far apart in the tree; avoid prop drilling.
+WHERE Imported by Navbar, pages, ProtectedRoute, useProfileSync.
+
+      useAuthStore       user {id,name,email}; signup/login/logout;
+                         persisted "medicare-auth-user" (identity only)
+                         selectIsAuthenticated
+      useProfileStore    name/email/phone/userId/loading/error;
+                         loadProfile/saveProfile/clearProfile; NOT persisted
+                         selectIsProfileComplete
+      useFavoritesStore  favorites: number[]; toggleFavorite/isFavorite;
+                         persisted "medicare-favorite-doctors"
+      useThemeStore      theme; toggleTheme; persisted "medicare-theme";
+                         applies the `dark` class at import time
+
+      SELECTORS are the concept to understand: `selectIsAuthenticated` and
+      `selectIsProfileComplete` are DERIVED, so they cannot drift out of sync
+      with the state they describe, and both the guard and the Navbar read the
+      same one.
+
+------------------------------------------------------------------
+I. API MODULE — src/services/api.js
+------------------------------------------------------------------
+WHAT  One Axios instance + one function per endpoint, each ending in
+      `.then(unwrap)`.
+WHY   The only place that knows HTTP exists. Components call named functions and
+      receive plain data.
+WHERE Imported by pages and by the auth/profile stores.
+
+      `const unwrap = (response) => response.data` — Axios resolves with the
+      full response object; callers only want the body.
+
+      PATCH vs PUT is encoded here: `updateUser` uses PATCH (protect the
+      password), `updateAppointment` uses PUT (full replacement).
+
+------------------------------------------------------------------
+J. CLASS-NAME HELPER — src/lib/utils.js
+------------------------------------------------------------------
+WHAT  `cn(...inputs) => twMerge(clsx(inputs))`
+WHY   Joins conditional class names and resolves Tailwind conflicts so the LAST
+      class wins (`p-2 p-4` -> `p-4`) instead of both being emitted.
+WHERE Nearly every component, and every ui primitive's className prop — which is
+      what lets callers override the defaults without fighting specificity.
+
+------------------------------------------------------------------
+K. DOCTOR COMPONENTS — src/components/doctors/
+------------------------------------------------------------------
+      DoctorCard      one doctor in the grid: avatar, name (Link), specialty
+                      badge, rating, favorite heart, description, working days,
+                      slot range, fee, "View details".
+                      The heart handler calls preventDefault + stopPropagation so
+                      it cannot trigger the card's navigation, and sets
+                      aria-pressed.
+      DoctorList      the responsive grid (`sm:grid-cols-2 xl:grid-cols-3`),
+                      `key={doctor.id}`, staggered animation capped at index 8.
+      DoctorFilters   the controlled search input + specialty select. Uses
+                      useRef to refocus the input after the clear button.
+      DoctorAvatar    deterministic initials avatar: strips a leading "Dr.",
+                      takes two initials, and picks a color with
+                      `palette[seed % palette.length]` where seed is the doctor
+                      id. No image assets.
+      DoctorCardSkeleton  mirrors DoctorCard's exact layout so there is no
+                      layout shift.
+
+------------------------------------------------------------------
+L. APPOINTMENT COMPONENTS — src/components/appointments/
+------------------------------------------------------------------
+      AppointmentForm      the shared, reused form. Uses watch('doctorId') to
+                           drive the time-slot dropdown from the selected
+                           doctor, adds the saved time back if it is missing
+                           from the new doctor's slots, and memoizes `dateMin`
+                           so `new Date()` runs once.
+      AppointmentCard      one appointment + its doctor + Edit/Cancel actions.
+                           Parses the date as `${date}T00:00:00` for LOCAL
+                           display, and hides Cancel when status is 'cancelled'.
+      AppointmentStatus    maps scheduled/completed/cancelled to colored badges.
+                           Honest note: only 'scheduled' is ever written by the
+                           UI.
+      AppointmentCardSkeleton / AppointmentFormSkeleton  layout-matched
+                           placeholders.
+
+------------------------------------------------------------------
+M. PAGINATION — src/components/ui/pagination.jsx
+------------------------------------------------------------------
+WHAT  Prev/Next + numbered pages with ellipses; returns null when there is only
+      one page.
+WHY   The doctor list needs paging, and a plain "1 2 3 ... 50" would overflow.
+WHERE DoctorsPage.
+
+      `getPageItems(current, total, slots)` always returns the same number of
+      tokens (7 desktop / 5 mobile), so the Prev/Next buttons never shift
+      position as the page changes.
+      `useIsMobile()` uses matchMedia and removes its listener on unmount.
+
+------------------------------------------------------------------
+N. TOAST SYSTEM — src/components/ui/toast.jsx
+------------------------------------------------------------------
+WHAT  `ToastProvider` (context + portal) and `useToast()` -> `{ toast }`.
+      `toast(message, type)` with success/error/info.
+WHY   Feedback after every mutation, replacing `alert()` — no extra dependency.
+WHERE App.jsx wraps the router in ToastProvider; pages call useToast.
+
+      Details: auto-dismiss after 4 s, capped at 3 on screen, an animated close
+      (a `closing` flag, then removal 200 ms later), timers kept in
+      `useRef(new Map())` so a manual dismiss can cancel the auto-dismiss.
+      The portal container is `pointer-events-none` while toasts are
+      `pointer-events-auto`, so the empty area does not block clicks.
+
+------------------------------------------------------------------
+O. DIALOG — src/components/ui/dialog.jsx
+------------------------------------------------------------------
+WHAT  A portal-rendered modal with DialogHeader/Title/Description/Footer.
+WHY   To confirm a destructive, irreversible action (cancelling an appointment)
+      so it cannot happen from a single mis-click.
+WHERE AppointmentsPage.
+
+      Details: closes on Escape and on overlay click, locks and restores body
+      scrolling, `role="dialog"` + `aria-modal="true"`, and cannot close itself
+      (it is controlled by the parent's state).
+
+------------------------------------------------------------------
+P. ERROR ALERT — src/components/ui/alert.jsx
+------------------------------------------------------------------
+WHAT  `ErrorAlert({ title, message, onRetry })` with `role="alert"` and an
+      optional "Try again" button.
+WHY   One consistent error presentation, used on the pages that fetch data. The
+      retry button re-runs the same request the page loaded with.
+WHERE DoctorsPage, DoctorDetailsPage, BookAppointmentPage, AppointmentsPage,
+      EditAppointmentPage, ProfilePage, LoginPage, SignupPage.
+
+------------------------------------------------------------------
+Q. SKELETON — src/components/ui/skeleton.jsx
+------------------------------------------------------------------
+WHAT  A `bg-muted` block with a shimmer overlay (`after:animate-shimmer`), marked
+      aria-hidden.
+WHY   Loading feedback that matches the real layout, so nothing jumps. Colors
+      come from theme tokens, so it works in both themes.
+WHERE All five skeleton components and the router's PageFallback.
+
+------------------------------------------------------------------
+R. FORM HELPERS INSIDE AppointmentForm.jsx
+------------------------------------------------------------------
+      FALLBACK_SLOTS     the default time list used before a doctor is chosen
+      todayIsoDate()     today as YYYY-MM-DD in LOCAL time (the timezone-offset
+                         subtraction is what prevents returning yesterday's date)
+      notInPast(value)   the validation rule; used ALONGSIDE the input's `min`
+                         attribute, because `min` is a UI hint that can be
+                         bypassed and `validate` is the actual guarantee
+      FieldError         renders `<p role="alert">` only when there is a message
+
+------------------------------------------------------------------
+S. INITIALS HELPERS
+------------------------------------------------------------------
+      getInitials()  ProfilePage — the USER's avatar. Splits on whitespace,
+                     filters empty segments, takes the first letter of each of
+                     the first two words, upper-cases. Returns '' rather than
+                     throwing on empty input.
+      initials()     DoctorAvatar — the DOCTOR's avatar. Also strips a leading
+                     "Dr." so "Dr. Sarah Mitchell" -> "SM", not "DS".
+
+------------------------------------------------------------------
+T. THEME APPLICATION
+------------------------------------------------------------------
+      applyThemeClass(theme)   toggles the `dark` class on <html>
+      index.html inline script prevents the flash of the wrong theme by
+                               applying the class before the first paint
+      index.css                :root and .dark variable sets; `@theme inline`
+                               exposes them to Tailwind utilities; the keyframes
+                               and the prefers-reduced-motion block
+
+------------------------------------------------------------------
+U. VITE CONFIG — vite.config.js
+------------------------------------------------------------------
+WHAT  Registers `react()`, the React Compiler preset via babel, and
+      `tailwindcss()`, plus the `/api` dev proxy.
+WHY   The proxy is how the app reaches json-server without CORS, and the plugins
+      are what make JSX, Tailwind and the compiler work.
+WHERE The build/dev entry configuration.
+
+      REMEMBER: the proxy is DEV-SERVER ONLY. `npm run preview` does not proxy.
+
+------------------------------------------------------------------
+V. CROSS-CUTTING PATTERNS WORTH BEING ABLE TO NAME
+------------------------------------------------------------------
+      - "Load function reused for retry" — every page's load function is the
+        same one passed to ErrorAlert's onRetry.
+      - "Three-flag page state" — data / loading / error, with loading starting
+        as true so the first render is the loading state.
+      - "Guard order" — the auth guard outside the Suspense boundary.
+      - "Derived selectors" — completion and authentication are computed, never
+        stored as booleans.
+      - "Clear before you replace" — clearProfile before nulling the user, and
+        clearing the previous user's profile before loading a new one.
+      - "Copy before sort" — `[...appointments].sort(...)` to avoid mutating
+        state.
+      - "Functional updates" — `set((state) => ...)` in toggleFavorite and
+        `setAppointments((current) => ...)` after a delete, so the update is
+        based on the latest state.
+      - "Non-throwing store actions" — store actions return `{ user }` or
+        `{ error }` instead of throwing, so forms have a uniform result shape.
+
+
+==================================================
+21. PRODUCTION IMPROVEMENTS
+==================================================
+
+Nothing here is implemented. This is the discussion section: what would have to
+change for this to be a real system.
+
+------------------------------------------------------------------
+1. A REAL BACKEND
+------------------------------------------------------------------
+Replace json-server with a real API (Node/Express, NestJS, Django, Laravel,
+Spring...) that owns the business logic. json-server is a file wrapper: no
+validation, no transactions, no concurrency control, no relations, and it
+returns every user's password on `GET /users`.
+
+The frontend would barely change — that is the payoff of having all HTTP in one
+file. Only `VITE_API_URL` and the shapes of the responses would be revisited.
+
+------------------------------------------------------------------
+2. A REAL DATABASE
+------------------------------------------------------------------
+Replace db.json with PostgreSQL/MySQL (relational, good for these relations) or
+MongoDB. This brings:
+- tables/collections for users, doctors and appointments
+- REAL RELATIONS: appointments.doctor_id as a foreign key, and a
+  users → appointments relation
+- CONSTRAINTS (NOT NULL, UNIQUE email, foreign keys) so invalid data cannot be
+  written
+- INDEXES on the fields we filter by (doctor specialty, appointment date)
+- TRANSACTIONS, so a booking that touches several rows either fully succeeds or
+  fully fails
+- CONCURRENCY CONTROL, replacing "last write wins" on a JSON file
+
+------------------------------------------------------------------
+3. SECURE AUTHENTICATION
+------------------------------------------------------------------
+This is the biggest gap. Currently: plain-text passwords in a JSON file, decided
+in the browser, bypassable by editing localStorage.
+
+Required changes:
+- PASSWORD HASHING with bcrypt or argon2. Never store or log the plain value.
+  The comparison becomes `await bcrypt.compare(input, storedHash)`.
+- NEVER RETURN THE PASSWORD. The API should project only the fields the client
+  needs (id, name, email), so a leaked response cannot leak credentials.
+- SESSIONS OR TOKENS: an httpOnly, Secure, SameSite cookie session, or a short
+  lived access token with a refresh token. NOT localStorage — localStorage is
+  readable by any script on the page, so an XSS bug becomes full account theft.
+- SERVER-SIDE SESSION INVALIDATION so logout actually ends the session, rather
+  than just deleting a client-side flag.
+- RATE LIMITING and lockout on the login endpoint, to stop brute forcing.
+- PASSWORD POLICY and, ideally, a breach check.
+- EMAIL VERIFICATION on signup.
+- PASSWORD RESET via a single-use, time-limited token over email.
+- CSRF protection if cookie-based.
+
+------------------------------------------------------------------
+4. AUTHORIZATION — AND WHY IT IS THE MISSING PIECE FOR APPOINTMENTS
+------------------------------------------------------------------
+Authentication says WHO you are; authorization says what you may do. Right now
+there is none: `GET /appointments` returns everyone's appointments to anyone,
+and any client can read or modify any record.
+
+What this project needs specifically:
+- `userId` ON THE APPOINTMENT record, set from the authenticated session at
+  booking time (never from the request body — a client must not be able to
+  claim an appointment belongs to someone else).
+- The list endpoint returning ONLY the current user's appointments:
+  `GET /appointments` -> filtered by the session user.
+- Ownership checks on GET/PUT/DELETE `/appointments/:id` so one user cannot
+  read, reschedule or delete another's appointment by guessing an id.
+- Same for favorites, if they move server-side.
+- ROLE-BASED ACCESS if the system grows: patient vs. doctor vs. admin. Doctors
+  would need a dashboard to see their own schedule; admins would manage the
+  doctor catalogue. Currently doctors are read-only seed data and there is no
+  role concept at all.
+
+IMPORTANT: a client-side filter is NOT authorization. Hiding another user's data
+in React does nothing if the API still returns it.
+
+------------------------------------------------------------------
+5. INPUT VALIDATION AND DATA INTEGRITY
+------------------------------------------------------------------
+Client-side validation is UX; it is not a security control (it can be bypassed
+with a direct API call).
+
+Required:
+- SERVER-SIDE SCHEMA VALIDATION on every endpoint (zod, joi, class-validator)
+  reusing the same rules the forms use
+- WHITELISTING of accepted fields, so a client cannot set `status`, `userId` or
+  `id` by adding them to the body (right now the client DOES send `status`)
+- SLOT CONFLICT PREVENTION: two people can currently book the same doctor at the
+  same date and time, because nothing checks. A real system needs a unique
+  constraint (doctor_id, date, time) or an availability table, plus a check
+  inside a transaction so two simultaneous requests cannot both succeed.
+- A CLOSED SET OF ALLOWED STATUS VALUES, and transitions enforced by the server
+- Reject dates in the past and times outside the doctor's working days —
+  currently the UI hints at this but the API enforces nothing
+
+------------------------------------------------------------------
+6. API SECURITY
+------------------------------------------------------------------
+- HTTPS everywhere
+- CORS locked to the real frontend origin, not `*`
+- RATE LIMITING per IP/user on all endpoints, especially auth
+- SECURITY HEADERS (Helmet: CSP, HSTS, X-Content-Type-Options, ...)
+- Structured, non-leaky errors: return a message and a code, never a stack trace
+  or a database error. Do not confirm whether an email exists (this project
+  already does that well on the login form — the same reasoning applies to the
+  API).
+- REQUEST SIZE LIMITS and payload validation
+- AUDIT LOGGING for sensitive actions (login, cancellation, profile change)
+
+------------------------------------------------------------------
+7. PROPER SESSION / TOKEN HANDLING ON THE FRONTEND
+------------------------------------------------------------------
+- Move the session out of localStorage into an httpOnly cookie, or keep tokens in
+  memory with a refresh flow
+- An AXIOS REQUEST INTERCEPTOR to attach the auth header, and a RESPONSE
+  INTERCEPTOR to handle 401 (refresh once, then log out) in ONE place instead of
+  per page
+- Handle token expiry and silent refresh
+- Keep the route guard, but treat it as UX ONLY — the server must enforce
+  everything
+
+------------------------------------------------------------------
+8. ERROR HANDLING AND OBSERVABILITY
+------------------------------------------------------------------
+- A REACT ERROR BOUNDARY around the routed content, so a render error shows a
+  recoverable message instead of a blank page (currently missing entirely)
+- GLOBAL API error handling via an interceptor
+- RETRY WITH BACKOFF for transient network failures
+- ERROR MONITORING (Sentry or similar) with source maps, so production errors
+  are visible rather than only appearing in one user's console
+- STRUCTURED LOGGING and alerting on the server
+- Health checks and uptime monitoring
+
+------------------------------------------------------------------
+9. PERFORMANCE AND SCALE
+------------------------------------------------------------------
+- SERVER-SIDE pagination, filtering and search, so the client does not fetch all
+  50 doctors (a real clinic could have thousands)
+- A DATA-CACHING LAYER (React Query / SWR) for caching, de-duplication,
+  background refetching and optimistic updates with rollback
+- REQUEST CANCELLATION with AbortController on route changes and re-typed
+  searches
+- VIRTUALISED lists if the appointment history grows large
+- A CDN for static assets, plus compression and long-lived cache headers
+- Real IMAGE handling: doctor photos, uploaded to object storage and served
+  resized via a CDN (currently avatars are generated initials, so there are no
+  images at all)
+- BUNDLE ANALYSIS and a performance budget
+
+------------------------------------------------------------------
+10. TESTING AND CI/CD
+------------------------------------------------------------------
+Currently there are NO tests at all, and `npm run lint` (oxlint) is the only
+automated check.
+- UNIT tests for the pure logic: `getInitials`, `todayIsoDate`, `notInPast`,
+  `getPageItems`, the filteredDoctors logic, the initials helper
+- COMPONENT tests (React Testing Library) for the forms, the guard and the
+  empty/error states
+- INTEGRATION tests for the flows (signup → profile → book → reschedule →
+  cancel) against a test API
+- END-TO-END tests (Playwright/Cypress) covering the full user journey in a
+  real browser
+- CI (GitHub Actions): lint, test and build on every pull request
+- TypeScript, or at least runtime schema validation, to catch shape mismatches
+  between the frontend and the API
+
+------------------------------------------------------------------
+11. DEPLOYMENT
+------------------------------------------------------------------
+- The frontend builds to static files (`dist/`) and can go on Netlify, Vercel,
+  S3 + CloudFront, or Nginx. Note the current `/api` proxy is DEV-ONLY, so a
+  production build needs either `VITE_API_URL` pointing at the real API or a
+  reverse proxy rule on the host.
+- The backend needs a real host with managed secrets, its own database, backups,
+  migrations, and separate staging/production environments.
+- Environment configuration must be per-environment, and secrets must live in a
+  secret manager — never in the repository or in a `VITE_` variable, since Vite
+  INLINES those into the JavaScript bundle where anyone can read them.
+- Zero-downtime deploys, rollback, and a migration strategy.
+
+------------------------------------------------------------------
+12. PRODUCT / UX GAPS WORTH MENTIONING
+------------------------------------------------------------------
+- No email or SMS confirmation, and no reminder before the appointment
+- No calendar export (ICS) or "add to calendar"
+- No payment or insurance handling
+- No doctor-side view (a schedule for the doctor, and the ability to mark a visit
+  completed or cancelled)
+- No appointment history split into upcoming vs. past, and no automatic
+  transition to "completed"
+- No cancellation policy or grace period
+- No accessibility audit against WCAG (the app has many good practices —
+  aria labels, roles, focus rings, reduced-motion support — but no formal audit)
+- No internationalisation (the UI is English-only, currency is USD, and dates are
+  formatted with the 'en-US' locale)
+
+
+==================================================
+22. FINAL SUMMARY
+==================================================
+
+A concise summary to deliver in about one to two minutes.
+
+------------------------------------------------------------------
+
+"MediCare is a medical appointment booking system built as a single-page
+application with React 19 and Vite, backed by a mock REST API.
+
+The problem it solves is that booking a doctor normally takes phone calls and
+waiting. Here a patient can browse a catalogue of 50 doctors, search by name,
+filter by specialty, open a doctor's details to see their working days and
+available time slots, and book an appointment in a few clicks — then reschedule
+or cancel it later from one list.
+
+Architecturally it is layered, and the data flows in one direction. The UI is
+built from reusable components, split into generic primitives — buttons, cards,
+dialogs, skeletons — and domain components like DoctorCard and AppointmentForm.
+Each route is a page, and a page is where data is fetched and where loading and
+error state lives. Shared state lives in four Zustand stores: the authenticated
+user, a cache of that user's profile, the favorite doctors, and the theme. Every
+HTTP call goes through a single Axios instance in one file, and in development
+Vite proxies `/api` to json-server, which serves db.json as a REST API — so the
+frontend performs real HTTP CRUD without me writing a backend.
+
+On authentication: accounts are records in the users collection, and the profile
+fields live on that same record — which is how each user's profile stays
+separate. Login reads the account, the session keeps only the id, name and email
+and persists just that to localStorage, and the password is never stored in the
+browser. A route guard wraps the protected pages, and because the session
+rehydrates from localStorage synchronously, there is no loading flicker and no
+false redirect on refresh. The profile is then loaded from the server keyed by
+that user id, and it pre-fills the booking form.
+
+For performance I used route-level lazy loading so each page is its own chunk,
+Suspense with skeleton fallbacks, debounced search so the doctor list filters
+once instead of on every keystroke, client-side pagination so only six cards
+render at a time, memoized derivations, and the React Compiler for automatic
+memoization. Loading states, error states with retry, empty states, toasts and
+dark mode are all handled.
+
+I want to be clear about the limitations. It is a training project, and the
+authentication is a demo: passwords are stored in plain text in db.json, and the
+login decision is made in the browser with no token and no server-side check, so
+the route guard is a UX convenience rather than a real security boundary.
+Appointments are not linked to a user account yet — there is no userId on them,
+so the list shows all appointments — and favorites are stored per browser rather
+than per account. A production version would need a real backend and database,
+hashed passwords, token or cookie sessions, server-side validation and
+authorization so users can only reach their own data, plus tests and monitoring."
+
+------------------------------------------------------------------
+
+
+==================================================
+END OF PRESENTATION
+==================================================

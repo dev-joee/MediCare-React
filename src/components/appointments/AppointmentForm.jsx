@@ -29,9 +29,6 @@ function notInPast(value) {
   return value >= todayIsoDate() || 'Date cannot be in the past'
 }
 
-// Shared appointment form (React Hook Form) used for both booking and editing.
-// `submitting` disables the button and shows a spinner so in-flight saves are
-// obvious and double submissions are prevented.
 export function AppointmentForm({
   doctors,
   defaultValues,
@@ -50,8 +47,6 @@ export function AppointmentForm({
   const selectedDoctorId = watch('doctorId')
   const selectedDoctor = doctors.find((doctor) => doctor.id === Number(selectedDoctorId))
 
-  // Show the selected doctor's slots; keep the already-saved time selectable
-  // even when the appointment is being moved to another doctor.
   const baseSlots = selectedDoctor?.slots ?? FALLBACK_SLOTS
   const slots =
     defaultValues.time && !baseSlots.includes(defaultValues.time)

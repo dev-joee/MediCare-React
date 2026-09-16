@@ -10,12 +10,6 @@ import { Label } from '../components/ui/label'
 import { useToast } from '../components/ui/toast'
 import { useProfileStore, selectIsProfileComplete } from '../stores/useProfileStore'
 
-// Build avatar initials from the saved name:
-//   "Yousef Ali"          -> "YA"
-//   "  Ahmed   Mohamed "  -> "AM"   (extra spaces collapsed)
-//   "John"                -> "J"    (single name)
-// First letter of the first word, plus the first letter of the second word
-// when one exists. Never throws on empty / spaced input.
 function getInitials(name) {
   const words = name.trim().split(/\s+/).filter(Boolean)
   if (words.length === 0) return ''
@@ -33,9 +27,6 @@ function FieldError({ message }) {
   )
 }
 
-// The profile form (React Hook Form). Reused for both "Add" and "Edit": it is
-// pre-filled from the values passed in and reports back through onSave/onCancel
-// so the page can switch views. Same validation rules the form has always used.
 function ProfileForm({ defaultValues, onSave, onCancel, submitLabel }) {
   const {
     register,
@@ -119,7 +110,6 @@ function ProfileForm({ defaultValues, onSave, onCancel, submitLabel }) {
   )
 }
 
-// Saved-profile card: avatar initials, name, contact details and an edit action.
 function ProfileView({ name, email, phone, onEdit }) {
   return (
     <Card className="animate-fade-in-up">
@@ -149,8 +139,6 @@ function ProfileView({ name, email, phone, onEdit }) {
   )
 }
 
-// Shown when no profile has been saved yet: a clear, non-intrusive prompt
-// (no alert()) plus a button that opens the form.
 function EmptyProfile({ onAdd }) {
   return (
     <Card className="animate-fade-in-up">
@@ -187,13 +175,9 @@ export default function ProfilePage() {
   const saveProfile = useProfileStore((state) => state.saveProfile)
   const isComplete = useProfileStore(selectIsProfileComplete)
 
-  // Local view/edit toggle — no extra route or duplicate state needed.
   const [editing, setEditing] = useState(false)
 
-  // Persists to this user's own record in db.json, then updates the store.
   const handleSave = async (values) => {
-    // `isComplete` reflects the state *before* saving, so first save vs. update
-    // gives the right message. A successful save also clears the Navbar dot.
     const wasComplete = isComplete
     const { error: saveError } = await saveProfile(values)
     if (saveError) {

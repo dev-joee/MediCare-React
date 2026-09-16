@@ -3,9 +3,6 @@ import { Search, X } from 'lucide-react'
 import { Input } from '../ui/input'
 import { Select } from '../ui/select'
 
-// Search input is controlled (value + onChange drive the doctor list).
-// useRef is used for a small focus interaction: the clear button clears the
-// search and puts focus back into the input.
 export function DoctorFilters({ search, onSearchChange, specialty, onSpecialtyChange, specialties }) {
   const searchInputRef = useRef(null)
 

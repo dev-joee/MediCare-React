@@ -1,7 +1,6 @@
 import { Badge } from '../ui/badge'
 import { cn } from '../../lib/utils'
 
-// Simple status badge for an appointment.
 const styles = {
   scheduled: 'bg-sky-100 text-sky-700 border-transparent dark:bg-sky-950 dark:text-sky-300',
   completed:

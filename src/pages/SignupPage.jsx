@@ -41,8 +41,6 @@ export default function SignupPage() {
 
   const onSubmit = async (values) => {
     setFormError(null)
-    // Creates the account through json-server and logs the new user straight
-    // in — the store sets the session, so no second login step is needed.
     const { error } = await signup(values)
     if (error) {
       setFormError(error)

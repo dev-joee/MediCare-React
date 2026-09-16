@@ -1,10 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-// Global favorite doctors store.
-// Only doctor IDs are kept (never full doctor objects), so the list stays
-// small and never goes stale when doctor data changes on the server.
-// Persisted to localStorage, same pattern as useProfileStore.
 export const useFavoritesStore = create(
   persist(
     (set, get) => ({

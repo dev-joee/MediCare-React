@@ -1,9 +1,6 @@
 import { Card, CardContent } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
 
-// Loading placeholder that mirrors DoctorCard's exact layout (avatar, name,
-// specialty badge, rating, description, working days/slots, fee + button), so
-// the switch to real cards causes no visible layout jump.
 export function DoctorCardSkeleton() {
   return (
     <Card className="flex h-full flex-col">

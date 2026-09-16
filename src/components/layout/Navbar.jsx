@@ -72,9 +72,6 @@ export function Navbar() {
   const navigate = useNavigate()
   const { toast } = useToast()
   // Reactive: the dot shows only while the profile is incomplete and clears
-  // itself the moment the profile is saved (same source of truth as the page).
-  // Suppressed while the profile is still being fetched for the current user,
-  // so a login does not flash a stale dot.
   const profileComplete = useProfileStore(selectIsProfileComplete)
   const profileLoading = useProfileStore((state) => state.loading)
   const showProfileDot = !profileComplete && !profileLoading

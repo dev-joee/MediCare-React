@@ -1,8 +1,6 @@
 import { Card, CardContent } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
 
-// Loading placeholder that mirrors AppointmentCard's layout (doctor avatar,
-// name + status badge, specialty, detail grid, note, action buttons).
 export function AppointmentCardSkeleton() {
   return (
     <Card>
