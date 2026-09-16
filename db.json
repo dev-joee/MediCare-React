@@ -240,6 +240,954 @@
       "phone": "+1 (555) 010-2210",
       "email": "lucas.meyer@medicare.clinic",
       "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 11,
+      "name": "Dr. Scarlett Baker",
+      "specialty": "Gastroenterology",
+      "description": "Gastroenterologist expert in digestive system disorders, IBS and endoscopy procedures.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 16,
+      "consultationFee": 425,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2211",
+      "email": "scarlett.baker@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 12,
+      "name": "Dr. Aaron Miller",
+      "specialty": "Nephrology",
+      "description": "Nephrologist specializing in chronic kidney disease, dialysis care and hypertension.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 17,
+      "consultationFee": 150,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2212",
+      "email": "aaron.miller@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 13,
+      "name": "Dr. Lily Martin",
+      "specialty": "Pediatrics",
+      "description": "Pediatric specialist focused on adolescent medicine, vaccinations and developmental milestones.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 18,
+      "consultationFee": 175,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2213",
+      "email": "lily.martin@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 14,
+      "name": "Dr. Eli Allen",
+      "specialty": "Pulmonology",
+      "description": "Pulmonologist treating respiratory conditions including asthma, COPD and pneumonia.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 19,
+      "consultationFee": 200,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2214",
+      "email": "eli.allen@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 15,
+      "name": "Dr. Emma Rivera",
+      "specialty": "Rheumatology",
+      "description": "Rheumatologist diagnosing and treating arthritis, autoimmune diseases and joint inflammation.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 20,
+      "consultationFee": 225,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2215",
+      "email": "emma.rivera@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 16,
+      "name": "Dr. Liam Rodriguez",
+      "specialty": "Cardiology",
+      "description": "Interventional cardiologist performing cardiac catheterization and managing ischemic heart disease.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 5,
+      "consultationFee": 250,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2216",
+      "email": "liam.rodriguez@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 17,
+      "name": "Dr. Emily Perez",
+      "specialty": "Endocrinology",
+      "description": "Endocrinologist specializing in diabetes, thyroid disorders and hormonal imbalances.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 6,
+      "consultationFee": 275,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2217",
+      "email": "emily.perez@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 18,
+      "name": "Dr. Nathan Wright",
+      "specialty": "Oncology",
+      "description": "Medical oncologist providing comprehensive cancer care, chemotherapy management and patient support.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 7,
+      "consultationFee": 300,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2218",
+      "email": "nathan.wright@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 19,
+      "name": "Dr. Penelope Mitchell",
+      "specialty": "Dermatology",
+      "description": "Advanced dermatologist focusing on cosmetic dermatology, laser treatments and skin rejuvenation.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 8,
+      "consultationFee": 325,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2219",
+      "email": "penelope.mitchell@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 20,
+      "name": "Dr. Owen Hernandez",
+      "specialty": "Urology",
+      "description": "Urologist focusing on urinary tract disorders, kidney stones and men's health.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 9,
+      "consultationFee": 350,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2220",
+      "email": "owen.hernandez@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 21,
+      "name": "Dr. Stella White",
+      "specialty": "Gastroenterology",
+      "description": "Gastroenterologist expert in digestive system disorders, IBS and endoscopy procedures.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 10,
+      "consultationFee": 375,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2221",
+      "email": "stella.white@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 22,
+      "name": "Dr. David Torres",
+      "specialty": "Nephrology",
+      "description": "Nephrologist specializing in chronic kidney disease, dialysis care and hypertension.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 11,
+      "consultationFee": 400,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2222",
+      "email": "david.torres@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 23,
+      "name": "Dr. Mia Roberts",
+      "specialty": "Pediatrics",
+      "description": "Pediatric specialist focused on adolescent medicine, vaccinations and developmental milestones.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 12,
+      "consultationFee": 425,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2223",
+      "email": "mia.roberts@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 24,
+      "name": "Dr. Oliver Gonzalez",
+      "specialty": "Pulmonology",
+      "description": "Pulmonologist treating respiratory conditions including asthma, COPD and pneumonia.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 13,
+      "consultationFee": 150,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2224",
+      "email": "oliver.gonzalez@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 25,
+      "name": "Dr. Ella Sanchez",
+      "specialty": "Rheumatology",
+      "description": "Rheumatologist diagnosing and treating arthritis, autoimmune diseases and joint inflammation.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 14,
+      "consultationFee": 175,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2225",
+      "email": "ella.sanchez@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 26,
+      "name": "Dr. Julian Hill",
+      "specialty": "Cardiology",
+      "description": "Interventional cardiologist performing cardiac catheterization and managing ischemic heart disease.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 15,
+      "consultationFee": 200,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2226",
+      "email": "julian.hill@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 27,
+      "name": "Dr. Nora Johnson",
+      "specialty": "Endocrinology",
+      "description": "Endocrinologist specializing in diabetes, thyroid disorders and hormonal imbalances.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 16,
+      "consultationFee": 225,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2227",
+      "email": "nora.johnson@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 28,
+      "name": "Dr. Hunter Anderson",
+      "specialty": "Oncology",
+      "description": "Medical oncologist providing comprehensive cancer care, chemotherapy management and patient support.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 17,
+      "consultationFee": 250,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2228",
+      "email": "hunter.anderson@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 29,
+      "name": "Dr. Chloe Ramirez",
+      "specialty": "Dermatology",
+      "description": "Advanced dermatologist focusing on cosmetic dermatology, laser treatments and skin rejuvenation.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 18,
+      "consultationFee": 275,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2229",
+      "email": "chloe.ramirez@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 30,
+      "name": "Dr. Jackson Green",
+      "specialty": "Urology",
+      "description": "Urologist focusing on urinary tract disorders, kidney stones and men's health.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 19,
+      "consultationFee": 300,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2230",
+      "email": "jackson.green@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 31,
+      "name": "Dr. Abigail Brown",
+      "specialty": "Gastroenterology",
+      "description": "Gastroenterologist expert in digestive system disorders, IBS and endoscopy procedures.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 20,
+      "consultationFee": 325,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2231",
+      "email": "abigail.brown@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 32,
+      "name": "Dr. Caleb Taylor",
+      "specialty": "Nephrology",
+      "description": "Nephrologist specializing in chronic kidney disease, dialysis care and hypertension.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 5,
+      "consultationFee": 350,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2232",
+      "email": "caleb.taylor@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 33,
+      "name": "Dr. Zoey Robinson",
+      "specialty": "Pediatrics",
+      "description": "Pediatric specialist focused on adolescent medicine, vaccinations and developmental milestones.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 6,
+      "consultationFee": 375,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2233",
+      "email": "zoey.robinson@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 34,
+      "name": "Dr. Isaac Nelson",
+      "specialty": "Pulmonology",
+      "description": "Pulmonologist treating respiratory conditions including asthma, COPD and pneumonia.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 7,
+      "consultationFee": 400,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2234",
+      "email": "isaac.nelson@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 35,
+      "name": "Dr. Aubrey Garcia",
+      "specialty": "Rheumatology",
+      "description": "Rheumatologist diagnosing and treating arthritis, autoimmune diseases and joint inflammation.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 8,
+      "consultationFee": 425,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2235",
+      "email": "aubrey.garcia@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 36,
+      "name": "Dr. Benjamin Jackson",
+      "specialty": "Cardiology",
+      "description": "Interventional cardiologist performing cardiac catheterization and managing ischemic heart disease.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 9,
+      "consultationFee": 150,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2236",
+      "email": "benjamin.jackson@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 37,
+      "name": "Dr. Isabella Young",
+      "specialty": "Endocrinology",
+      "description": "Endocrinologist specializing in diabetes, thyroid disorders and hormonal imbalances.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 10,
+      "consultationFee": 175,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2237",
+      "email": "isabella.young@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 38,
+      "name": "Dr. Mason Hall",
+      "specialty": "Oncology",
+      "description": "Medical oncologist providing comprehensive cancer care, chemotherapy management and patient support.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 11,
+      "consultationFee": 200,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2238",
+      "email": "mason.hall@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 39,
+      "name": "Dr. Aria Davis",
+      "specialty": "Dermatology",
+      "description": "Advanced dermatologist focusing on cosmetic dermatology, laser treatments and skin rejuvenation.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 12,
+      "consultationFee": 225,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2239",
+      "email": "aria.davis@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 40,
+      "name": "Dr. Leo Lee",
+      "specialty": "Urology",
+      "description": "Urologist focusing on urinary tract disorders, kidney stones and men's health.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 13,
+      "consultationFee": 250,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2240",
+      "email": "leo.lee@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 41,
+      "name": "Dr. Riley King",
+      "specialty": "Gastroenterology",
+      "description": "Gastroenterologist expert in digestive system disorders, IBS and endoscopy procedures.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 14,
+      "consultationFee": 275,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2241",
+      "email": "riley.king@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 42,
+      "name": "Dr. Christian Campbell",
+      "specialty": "Nephrology",
+      "description": "Nephrologist specializing in chronic kidney disease, dialysis care and hypertension.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 15,
+      "consultationFee": 300,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2242",
+      "email": "christian.campbell@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 43,
+      "name": "Dr. Victoria Martinez",
+      "specialty": "Pediatrics",
+      "description": "Pediatric specialist focused on adolescent medicine, vaccinations and developmental milestones.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 16,
+      "consultationFee": 325,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2243",
+      "email": "victoria.martinez@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 44,
+      "name": "Dr. Gabriel Thompson",
+      "specialty": "Pulmonology",
+      "description": "Pulmonologist treating respiratory conditions including asthma, COPD and pneumonia.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 17,
+      "consultationFee": 350,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2244",
+      "email": "gabriel.thompson@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 45,
+      "name": "Dr. Evelyn Scott",
+      "specialty": "Rheumatology",
+      "description": "Rheumatologist diagnosing and treating arthritis, autoimmune diseases and joint inflammation.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 18,
+      "consultationFee": 375,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2245",
+      "email": "evelyn.scott@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 46,
+      "name": "Dr. Logan Carter",
+      "specialty": "Cardiology",
+      "description": "Interventional cardiologist performing cardiac catheterization and managing ischemic heart disease.",
+      "workingDays": [
+        "Tue",
+        "Thu",
+        "Sat"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 19,
+      "consultationFee": 400,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2246",
+      "email": "logan.carter@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
+    },
+    {
+      "id": 47,
+      "name": "Dr. Grace Lopez",
+      "specialty": "Endocrinology",
+      "description": "Endocrinologist specializing in diabetes, thyroid disorders and hormonal imbalances.",
+      "workingDays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:00",
+        "10:30",
+        "12:00",
+        "14:00"
+      ],
+      "experienceYears": 20,
+      "consultationFee": 425,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2247",
+      "email": "grace.lopez@medicare.clinic",
+      "location": "MediCare Clinic, East Branch"
+    },
+    {
+      "id": 48,
+      "name": "Dr. Connor Harris",
+      "specialty": "Oncology",
+      "description": "Medical oncologist providing comprehensive cancer care, chemotherapy management and patient support.",
+      "workingDays": [
+        "Wed",
+        "Sat"
+      ],
+      "slots": [
+        "09:00",
+        "10:00",
+        "11:00",
+        "14:00",
+        "15:00"
+      ],
+      "experienceYears": 5,
+      "consultationFee": 150,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2248",
+      "email": "connor.harris@medicare.clinic",
+      "location": "MediCare Clinic, Downtown Branch"
+    },
+    {
+      "id": 49,
+      "name": "Dr. Addison Nguyen",
+      "specialty": "Dermatology",
+      "description": "Advanced dermatologist focusing on cosmetic dermatology, laser treatments and skin rejuvenation.",
+      "workingDays": [
+        "Mon",
+        "Thu",
+        "Fri"
+      ],
+      "slots": [
+        "09:30",
+        "11:00",
+        "13:30",
+        "15:00"
+      ],
+      "experienceYears": 6,
+      "consultationFee": 175,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2249",
+      "email": "addison.nguyen@medicare.clinic",
+      "location": "MediCare Clinic, North Branch"
+    },
+    {
+      "id": 50,
+      "name": "Dr. Alexander Smith",
+      "specialty": "Urology",
+      "description": "Urologist focusing on urinary tract disorders, kidney stones and men's health.",
+      "workingDays": [
+        "Mon",
+        "Wed",
+        "Fri"
+      ],
+      "slots": [
+        "10:00",
+        "11:00",
+        "12:00",
+        "16:00",
+        "17:00"
+      ],
+      "experienceYears": 7,
+      "consultationFee": 200,
+      "rating": 4.3,
+      "phone": "+1 (555) 010-2250",
+      "email": "alexander.smith@medicare.clinic",
+      "location": "MediCare Clinic, West Branch"
     }
   ],
   "appointments": []
