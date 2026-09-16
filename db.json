@@ -1190,5 +1190,25 @@
       "location": "MediCare Clinic, West Branch"
     }
   ],
-  "appointments": []
+  "appointments": [],
+  "users": [
+    {
+      "id": 1,
+      "name": "Demo Patient",
+      "email": "demo@medicare.test",
+      "password": "demo1234"
+    },
+    {
+      "id": 2,
+      "name": "Yousef Ali",
+      "email": "yousef@medicare.test",
+      "password": "demo1234"
+    },
+    {
+      "name": "Yousef Ali",
+      "email": "yousefali@gmail.com",
+      "password": "2244yousef",
+      "id": 3
+    }
+  ]
 }

@@ -38,3 +38,14 @@ export function updateAppointment(id, appointment) {
 export function deleteAppointment(id) {
   return api.delete(`/appointments/${id}`).then(unwrap)
 }
+
+// Users — mock authentication against the local json-server (see
+// src/stores/useAuthStore.js). json-server filters by any field via query
+// params, so `GET /users?email=...` returns an array of matching accounts.
+export function findUserByEmail(email) {
+  return api.get('/users', { params: { email } }).then(unwrap)
+}
+
+export function createUser(user) {
+  return api.post('/users', user).then(unwrap)
+}

@@ -1,13 +1,21 @@
 import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { CalendarDays, Home, Menu, Moon, Stethoscope, Sun, User, X } from 'lucide-react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { CalendarDays, Home, LogIn, LogOut, Menu, Moon, Stethoscope, Sun, User, UserPlus, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { buttonVariants } from '../ui/button'
+import { useToast } from '../ui/toast'
 import { useProfileStore, selectIsProfileComplete } from '../../stores/useProfileStore'
+import { selectIsAuthenticated, useAuthStore } from '../../stores/useAuthStore'
 import { useThemeStore } from '../../stores/useThemeStore'
 
-const links = [
+// Always visible.
+const publicLinks = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/doctors', label: 'Doctors', icon: Stethoscope },
+]
+
+// Only meaningful once logged in — both are protected routes.
+const privateLinks = [
   { to: '/appointments', label: 'My Appointments', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ]
@@ -61,9 +69,24 @@ function ThemeToggle() {
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const navigate = useNavigate()
+  const { toast } = useToast()
   // Reactive: the dot shows only while the profile is incomplete and clears
   // itself the moment the profile is saved (same source of truth as the page).
   const profileComplete = useProfileStore(selectIsProfileComplete)
+  const isAuthenticated = useAuthStore(selectIsAuthenticated)
+  const logout = useAuthStore((state) => state.logout)
+
+  // Clears the session from the store (and localStorage); the auth selector
+  // above re-renders the Navbar.
+  const handleSignOut = () => {
+    setMenuOpen(false)
+    logout()
+    toast('You have been logged out.')
+    navigate('/')
+  }
+
+  const links = isAuthenticated ? [...publicLinks, ...privateLinks] : publicLinks
 
   const linkClassName = ({ isActive }) =>
     cn(
@@ -89,8 +112,27 @@ export function Navbar() {
           ))}
         </div>
 
-        {/* Theme toggle (works on every screen size) + mobile menu toggle */}
+        {/* Auth actions (desktop) + theme toggle + mobile menu toggle */}
         <div className="flex items-center gap-1">
+          <div className="hidden items-center gap-1 md:flex">
+            {isAuthenticated ? (
+              <button type="button" onClick={handleSignOut} className={linkClassName({ isActive: false })}>
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
+            ) : (
+              <>
+                <Link to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                  <LogIn />
+                  Log in
+                </Link>
+                <Link to="/signup" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+                  <UserPlus />
+                  Sign up
+                </Link>
+              </>
+            )}
+          </div>
           <ThemeToggle />
           <button
             type="button"
@@ -121,6 +163,29 @@ export function Navbar() {
                 {link.to === '/profile' && !profileComplete && <ProfileDot />}
               </NavLink>
             ))}
+
+            {/* Auth actions, mirroring the desktop row */}
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className={linkClassName({ isActive: false })}
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
+            ) : (
+              <>
+                <NavLink to="/login" className={linkClassName} onClick={() => setMenuOpen(false)}>
+                  <LogIn className="h-4 w-4" />
+                  Log in
+                </NavLink>
+                <NavLink to="/signup" className={linkClassName} onClick={() => setMenuOpen(false)}>
+                  <UserPlus className="h-4 w-4" />
+                  Sign up
+                </NavLink>
+              </>
+            )}
           </div>
         </div>
       )}
