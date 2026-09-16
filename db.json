@@ -1191,5 +1191,13 @@
     }
   ],
   "appointments": [],
-  "users": []
+  "users": [
+    {
+      "name": "Demo",
+      "email": "demo@medicare.com",
+      "password": "1234demo",
+      "phone": "",
+      "id": 1
+    }
+  ]
 }
